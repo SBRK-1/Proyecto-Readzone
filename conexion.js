@@ -10,7 +10,7 @@ const app = express();
 // CONEXIÓN A BASE DE DATOS
 // ─────────────────────────────────────────────
 
-const pool = mysql.createConnection({
+const pool = mysql.createPool({
     host: 'acela.proxy.rlwy.net',
     user: 'root',
     password: 'CUfMwashpeeRltZckCavAYvzQpWPkaPa',
@@ -18,7 +18,7 @@ const pool = mysql.createConnection({
     port: 27816,
     waitForConnections: true,
     connectionLimit: 10
-});
+}).promise();
 
 // Permitir recibir JSON con límite aumentado para fotos en base64
 app.use(express.json({ limit: "10mb" }));
