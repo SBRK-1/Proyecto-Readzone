@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Vista previa</title>
+
+<link rel="stylesheet" href="vista_previa.css">
+</head>
+<body>
+
+<header class="topbar">
+
+    <div class="logo">
+        READZONE
+    </div>
+
+    <button onclick="window.close()">
+        Volver al editor
+    </button>
+
+</header>
+
+<div class="contenedor">
+
+    <main class="lectura">
+
+        <h1 id="tituloHistoria"></h1>
+
+        <div id="contenidoHistoria"></div>
+
+    </main>
+
+    <aside class="sidebar">
+
+        <img
+        id="portadaHistoria"
+        class="portada">
+
+        <h3 id="nombreHistoria"></h3>
+
+        <p>
+            Vista previa de la historia
+        </p>
+
+    </aside>
+
+</div>
+
+<script src="vista_previa.js"></script>
+
+</body>
+</html>

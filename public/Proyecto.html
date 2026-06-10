@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>READZONE</title>
+    <link rel="stylesheet" href="Proyecto.css">
+    <script src="https://kit.fontawesome.com/dfce23e0ae.js" crossorigin="anonymous"></script>
+</head>
+
+<body>
+    <!-- HEADER -->
+    <header>
+        <h1>READZONE</h1>
+        <p>Deja volar tu imaginación para escribir en READZONE</p>
+    </header>
+
+    <!-- NAV -->
+    <nav>
+        <div class="logo-nav">
+            READZONE
+        </div>
+
+        <!-- BUSCADOR -->
+        <div class="busqueda">
+            <input
+            type="text"
+            id="buscador"
+            placeholder="Buscar historias...">
+            <button onclick="buscarHistorias()">🔍</button>
+        </div>
+        
+
+        <div class="perfil-menu">
+            <img
+            src="./imagenes/Asa-mitaka.jpg"
+            class="perfil-img"
+            id="fotoPerfilPrincipal">
+            <i class="fa-solid fa-chevron-down"></i>
+            <div class="menu-desplegable">
+                <a href="./User_dise.html">
+                    <i class="fa-solid fa-user"></i>
+                    Mi perfil
+                </a>
+
+                <a href="Libreria_historias.html">
+                    <i class="fa-solid fa-book"></i>
+                    Biblioteca
+                </a>
+
+                <hr>
+                <a href="#" class="cerrar"
+                id="cerrarSesion">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                    Cerrar sesión
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <main>
+        <section class="portfolio">
+
+            <!-- POPULARES -->
+            <div class="seccion">
+                <h3>Historias Populares</h3>
+                <div class="carrusel" id="populares"></div>
+            </div>
+
+            <!-- RECIENTES -->
+            <div class="seccion">
+                <h3>Historias Recientes</h3>
+
+                <div class="carrusel" id="recientes"></div>
+            </div>
+        </section>
+    </main>
+
+    <!-- FOOTER -->
+    <footer>
+        <p>Mapa del sitio | Aviso legal | Correo</p>
+        <p>Redes sociales</p>
+        <p>Bryan Enmanuel Gutierrez Salgado</p>
+    </footer>
+
+<script src="Busqueda_global.js"></script>
+<script src="Proyecto.js"></script>
+</body>
+</html>

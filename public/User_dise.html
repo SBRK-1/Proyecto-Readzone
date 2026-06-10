@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Perfil - READZONE</title>
+    <link rel="stylesheet" href="User_dise.css">
+    <script src="https://kit.fontawesome.com/dfce23e0ae.js" crossorigin="anonymous"></script>
+</head>
+
+<body>
+    <!-- PORTADA -->
+    <section class="portada">
+        <img src="./imagenes/Denji-Beam.jpeg" class="fondo">
+        <div class="perfil-info">
+            <img src="./imagenes/Asa-mitaka.jpg" class="foto-perfil foto-global">
+            <h1 id="nombrePerfil"></h1>
+            <p id="userPerfil"></p>
+            <div class="estadisticas">
+                <div>
+                    <h3 id="contadorObras">0</h3>
+                    <span>Obras</span>
+                </div>
+                <div>
+                    <h3>0</h3>
+                    <span>Lista de lectura</span>
+                </div>
+                <div>
+                    <h3>0</h3>
+                    <span>Seguidores</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- NAV -->
+    <nav>
+        <div class="nav-links">
+            <a href="#" onclick="mostrarSeccion('info-section', this)" class="activo">
+                Info
+            </a>
+            <a href="#" onclick="mostrarSeccion('conversaciones-section', this)">
+                Conversaciones
+            </a>
+        </div>
+
+        <button class="editar-btn" onclick="abrirEditor()">
+            <i class="fa-solid fa-gear"></i>
+            Edita tu perfil
+        </button>
+    </nav>
+
+    <!-- EDITAR PERFIL -->
+    <section id="editar-section" class="editar-section" style="display:none;">
+        <!-- BARRA SUPERIOR -->
+        <div class="editar-top">
+            <h2>Editando tu perfil ahora</h2>
+            <div class="acciones-editar">
+                <button class="guardar-btn" onclick="guardarCambios()">
+                    Guardar cambios
+                </button>
+                <button class="cancelar-btn" onclick="cerrarEditor()">
+                    Cancelar
+                </button>
+            </div>
+        </div>
+
+        <!-- PORTADA EDITAR -->
+        <div class="editar-portada">
+            <img src="./imagenes/Denji-Beam.jpeg" class="editar-fondo" id="imagenFondo">
+            <div class="overlay-editar"></div>
+            <button class="cambiar-fondo"
+                onclick="document.getElementById('inputFondo').click()">
+                <i class="fa-solid fa-camera"></i>
+                Cambiar la imagen de fondo
+            </button>
+            <input type="file" id="inputFondo" accept="image/*" hidden>
+            <div class="editar-perfil-box">
+                <div class="foto-editable">
+                    <img src="./imagenes/Asa-mitaka.jpg" id="fotoPerfil">
+                    <div class="icono-camara"
+                        onclick="document.getElementById('inputFoto').click()">
+                        <i class="fa-solid fa-camera"></i>
+                    </div>
+                    <input type="file" id="inputFoto" accept="image/*" hidden>
+                </div>
+                <input
+                    type="text"
+                    value=""
+                    class="input-nombre"
+                    id="inputNombre">
+                <input
+                    type="text"
+                    value=""
+                    id="inputUser"
+                    class="input-user">
+                <div class="estadisticas editar-stats">
+                    <div>
+                        <h3>0</h3>
+                        <span>Obras</span>
+                    </div>
+                    <div>
+                        <h3>0</h3>
+                        <span>Lista de lectura</span>
+                    </div>
+                    <div>
+                        <h3>0</h3>
+                        <span>Seguidores</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- FORMULARIO -->
+        <div class="editar-formulario">
+            <p class="texto-info">
+                La información que introduzcas aquí, incluyendo tu nombre de usuario,
+                foto de perfil e imagen de fondo, serán visibles a otros usuarios.
+            </p>
+
+            <div class="grupo-formulario">
+                <label>Género</label>
+                <select id="inputGenero">
+                    <option value="Selecciona una opción">Selecciona una opción</option>
+                    <option value="Masculino">Masculino</option>
+                    <option value="Femenino">Femenino</option>
+                    <option value="Prefiero no decirlo">Prefiero no decirlo</option>
+                </select>
+            </div>
+
+            <div class="grupo-formulario">
+                <label>Info</label>
+                <textarea id="inputBio" maxlength="2000"></textarea>
+                <span class="contador">
+                    <span id="contadorTexto">0</span>/2000
+                </span>
+            </div>
+        </div>
+    </section>
+
+    <!-- INFO -->
+    <section id="info-section" class="contenido-seccion activa">
+        <main>
+            <!-- SIDEBAR -->
+            <aside>
+                <div class="card">
+                    <p id="bioPerfil"></p>
+                    <h4 id="fechaRegistro"></h4>
+                    <p id="generoPerfil">Género: No especificado</p>
+                </div>
+
+                <div class="card">
+                    <h3>Último mensaje</h3>
+                    <div class="mensaje" id="ultimoMensaje">
+                        <img src="./imagenes/Asa-mitaka.jpg" class="foto-global">
+                        <div>
+                            <h4 class="nombre-dinamico"></h4>
+                            <p id="textoUltimoMensaje">
+                                Aún no hay mensajes publicados
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- HISTORIAS -->
+            <section class="historias">
+                <div class="historias-header">
+                    <div>
+                        <h2 id="tituloHistorias">
+                            Mis Historias
+                        </h2>
+                        <p>
+                            <span id="contadorPublicadas">0</span>
+                            Historias Publicadas
+                        </p>
+                    </div>
+
+                    <a href="Modificar_historias.html">
+                        <button class="gestionar-historias-btn">
+                            <i class="fa-solid fa-book"></i>
+                            Mis historias
+                        </button>
+                    </a>
+                    <i class="fa-solid fa-gear"></i>
+                </div>
+
+                <!-- AQUÍ SE AGREGAN LAS HISTORIAS -->
+                <div id="contenedorHistorias"></div>
+
+                <!-- MENSAJE VACÍO -->
+                <div class="card sin-historias" id="sinHistorias">
+                    <i class="fa-solid fa-book-open"></i>
+                    <h2>Aún no hay historias publicadas</h2>
+                    <p>
+                        Cuando publiques una historia aparecerá aquí.
+                    </p>
+                    <a href="Historias.html">
+                        <button>Crear historia</button>
+                    </a>
+                </div>
+            </section>
+
+        </main>
+    </section>
+
+    <!-- CONVERSACIONES -->
+    <section id="conversaciones-section" class="contenido-seccion" style="display:none;">
+        <div class="conversaciones-box">
+            <!-- PUBLICAR -->
+            <div class="publicar-box">
+                <img src="./imagenes/Asa-mitaka.jpg" class="foto-global">
+                <textarea placeholder="Publicar un mensaje" id="inputPublicacion"></textarea>
+                <button id="publicarBtn">
+                    Publicar
+                </button>
+            </div>
+            <!-- Posts -->
+            <div id="contenedorPosts"></div>
+        </div>
+    </section>
+
+    <script src="./User_dise.js"></script>
+</body>
+</html>

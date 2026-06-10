@@ -1,0 +1,67 @@
+body{
+    margin:0;
+    font-family:Segoe UI;
+    background:#fafafa;
+}
+
+.contenedor{
+    display:flex;
+}
+
+.sidebar{
+    width:320px;
+    background:white;
+    height:100vh;
+    overflow-y:auto;
+    border-right:1px solid #ddd;
+}
+
+.sidebar h2{
+    padding:20px;
+}
+
+.capitulo-item{
+    padding:15px 20px;
+    cursor:pointer;
+    border-bottom:1px solid #eee;
+}
+
+.capitulo-item:hover{
+    background:#f3f3f3;
+}
+
+.capitulo-activo{
+    background:#ece7ff;
+    color:#6a1b9a;
+    font-weight:bold;
+}
+
+.lector{
+    flex:1;
+    padding:40px;
+    max-width:900px;
+    margin:auto;
+}
+
+#tituloCapitulo{
+    margin-bottom:30px;
+}
+
+#contenidoCapitulo{
+    line-height:2;
+    font-size:18px;
+}
+
+.navegacion{
+    margin-top:50px;
+    text-align:center;
+}
+
+#btnSiguiente{
+    border:none;
+    background:#6a1b9a;
+    color:white;
+    padding:15px 30px;
+    border-radius:10px;
+    cursor:pointer;
+}

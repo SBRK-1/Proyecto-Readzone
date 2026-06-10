@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Resultados - READZONE</title>
+
+<link rel="stylesheet" href="Busqueda_historias.css">
+
+<script src="https://kit.fontawesome.com/dfce23e0ae.js" crossorigin="anonymous"></script>
+
+</head>
+<body>
+
+<!-- NAVBAR -->
+
+<nav>
+
+    <div class="logo-nav">
+        READZONE
+    </div>
+
+    <div class="busqueda">
+
+        <input
+        type="text"
+        id="buscador"
+        placeholder="Buscar historias...">
+
+        <button onclick="buscarHistorias()">
+            <i class="fa-solid fa-magnifying-glass"></i>
+        </button>
+
+    </div>
+
+</nav>
+
+<!-- CONTENEDOR -->
+
+<div class="contenedor">
+
+    <!-- FILTROS -->
+
+    <aside class="filtros">
+
+        <h2>Filtros</h2>
+
+        <h3>Estado</h3>
+
+        <label>
+            <input type="checkbox">
+            Completadas
+        </label>
+
+        <label>
+            <input type="checkbox">
+            En progreso
+        </label>
+
+        <h3>Ordenar por</h3>
+
+        <label>
+            <input type="radio" name="orden">
+            Más recientes
+        </label>
+
+        <label>
+            <input type="radio" name="orden">
+            Más populares
+        </label>
+
+    </aside>
+
+    <!-- RESULTADOS -->
+
+    <section class="resultados">
+
+        <h1 id="tituloBusqueda">
+            Resultados de búsqueda
+        </h1>
+
+        <div id="listaResultados">
+
+        </div>
+
+        <div id="sinResultados">
+
+            <i class="fa-solid fa-book-open"></i>
+
+            <h2>
+                No se encontraron resultados
+            </h2>
+
+            <p>
+                Busca otra cosa.
+            </p>
+
+        </div>
+
+    </section>
+
+</div>
+
+<script src="Busqueda_historias.js"></script>
+
+</body>
+</html>

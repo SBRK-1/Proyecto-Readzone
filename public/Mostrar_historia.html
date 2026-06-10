@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Historia</title>
+<link rel="stylesheet" href="Mostrar_historia.css">
+</head>
+<body>
+
+<div class="contenedor">
+
+    <!-- INFORMACIÓN DE LA HISTORIA -->
+    <section class="info-historia">
+
+        <img id="portadaHistoria"
+        class="portada">
+
+        <div class="datos">
+
+            <h1 id="tituloHistoria">
+                Título
+            </h1>
+
+            <p id="autorHistoria">
+                Autor
+            </p>
+
+            <div class="estadisticas">
+                <span>
+                    👁️ <span id="vistas">0</span>
+                </span>
+
+                <span>
+                    📚 <span id="cantidadCapitulos">0</span> capítulos
+                </span>
+            </div>
+
+            <button id="btnLeer">
+                Comenzar lectura
+            </button>
+        </div>
+    </section>
+
+    <!-- PESTAÑAS -->
+<section class="contenido-historia">
+
+    <div class="tabs">
+
+        <button
+        class="tab-btn activo"
+        data-tab="resumen">
+            Resumen
+        </button>
+
+        <button
+        class="tab-btn"
+        data-tab="capitulos">
+            Capítulos
+        </button>
+
+    </div>
+
+    <!-- CONTENIDO RESUMEN -->
+    <div
+    id="tabResumen"
+    class="tab-contenido activo">
+
+        <p id="descripcionHistoria"></p>
+
+    </div>
+
+    <!-- CONTENIDO CAPÍTULOS -->
+    <div
+    id="tabCapitulos"
+    class="tab-contenido">
+
+        <div id="listaCapitulos"></div>
+
+    </div>
+
+</section>
+
+</div>
+
+<script src="Mostrar_historia.js"></script>
+
+</body>
+</html>

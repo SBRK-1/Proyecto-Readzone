@@ -1,0 +1,129 @@
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+body{
+    font-family:Segoe UI, sans-serif;
+    background:#f5f5f5;
+}
+
+/* NAV */
+
+nav{
+    background:white;
+    padding:15px 25px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    box-shadow:0 2px 10px rgba(0,0,0,.1);
+}
+
+.logo-nav{
+    font-size:1.5rem;
+    font-weight:bold;
+    color:#7c3aed;
+}
+
+.busqueda{
+    display:flex;
+    gap:10px;
+}
+
+.busqueda input{
+    width:300px;
+    padding:12px;
+    border-radius:30px;
+    border:1px solid #ddd;
+}
+
+.busqueda button{
+    border:none;
+    background:#7c3aed;
+    color:white;
+    padding:12px 18px;
+    border-radius:30px;
+    cursor:pointer;
+}
+
+/* CONTENEDOR */
+
+.contenedor{
+    display:flex;
+    padding:30px;
+    gap:30px;
+}
+
+/* FILTROS */
+
+.filtros{
+    width:250px;
+    background:white;
+    padding:20px;
+    border-radius:15px;
+    box-shadow:0 2px 10px rgba(0,0,0,.08);
+}
+
+.filtros h2{
+    margin-bottom:20px;
+}
+
+.filtros h3{
+    margin-top:20px;
+    margin-bottom:10px;
+}
+
+.filtros label{
+    display:block;
+    margin-bottom:10px;
+}
+
+/* RESULTADOS */
+
+.resultados{
+    flex:1;
+}
+
+.resultados h1{
+    margin-bottom:20px;
+}
+
+#sinResultados{
+    background:white;
+    padding:80px 20px;
+    border-radius:20px;
+    text-align:center;
+    box-shadow:0 2px 10px rgba(0,0,0,.08);
+}
+
+#sinResultados i{
+    font-size:5rem;
+    color:#7c3aed;
+    margin-bottom:20px;
+}
+
+#sinResultados h2{
+    margin-bottom:10px;
+}
+
+#sinResultados p{
+    color:#666;
+}
+
+.resultado-card{
+    background:white;
+    border-radius:15px;
+    padding:15px;
+    margin-bottom:20px;
+    display:flex;
+    gap:20px;
+    box-shadow:0 2px 10px rgba(0,0,0,.08);
+}
+
+.resultado-card img{
+    width:140px;
+    height:200px;
+    object-fit:cover;
+    border-radius:10px;
+}

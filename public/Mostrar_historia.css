@@ -1,0 +1,119 @@
+body{
+    margin:0;
+    font-family:Segoe UI;
+    background:#f5f5f5;
+}
+
+.contenedor{
+    width:90%;
+    max-width:1200px;
+    margin:auto;
+    padding:30px;
+}
+
+.info-historia{
+    display:flex;
+    gap:30px;
+    background:white;
+    padding:25px;
+    border-radius:15px;
+}
+
+.portada{
+    width:250px;
+    height:350px;
+    object-fit:cover;
+    border-radius:10px;
+}
+
+.datos{
+    flex:1;
+}
+
+.estadisticas{
+    margin:20px 0;
+    display:flex;
+    gap:25px;
+}
+
+#btnLeer{
+    padding:15px 30px;
+    border:none;
+    background:black;
+    color:white;
+    border-radius:30px;
+    cursor:pointer;
+}
+
+.resumen,
+.capitulos{
+    background:white;
+    margin-top:20px;
+    padding:25px;
+    border-radius:15px;
+}
+
+.capitulo{
+    padding:15px;
+    border-bottom:1px solid #eee;
+    cursor:pointer;
+}
+
+.capitulo:hover{
+    background:#f2f2f2;
+}
+
+/* ========================= */
+/* PESTAÑAS */
+/* ========================= */
+
+.contenido-historia{
+    background:white;
+    margin-top:20px;
+    border-radius:15px;
+    overflow:hidden;
+}
+
+.tabs{
+    display:flex;
+    border-bottom:1px solid #ddd;
+}
+
+.tab-btn{
+    background:none;
+    border:none;
+    padding:18px 25px;
+    font-size:18px;
+    cursor:pointer;
+    font-weight:600;
+    color:#666;
+}
+
+.tab-btn.activo{
+    color:black;
+    border-bottom:3px solid rgb(76, 0, 255);
+}
+
+.tab-contenido{
+    display:none;
+    padding:25px;
+}
+
+.tab-contenido.activo{
+    display:block;
+}
+
+/* ========================= */
+/* CAPÍTULOS */
+/* ========================= */
+
+.capitulo{
+    padding:20px;
+    border-bottom:1px solid #eee;
+    cursor:pointer;
+    transition:0.2s;
+}
+
+.capitulo:hover{
+    background:#f5f5f5;
+}

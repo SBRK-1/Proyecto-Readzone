@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crear Historia - READZONE</title>
+    <link rel="stylesheet" href="Historias.css">
+    <script src="https://kit.fontawesome.com/dfce23e0ae.js" crossorigin="anonymous"></script>
+</head>
+<body>
+
+    <!-- TOP -->
+    <header class="top-bar">
+        <div class="top-left">
+            <i class="fa-solid fa-arrow-left"></i>
+            <div>
+                <span>Agregar información sobre la historia</span>
+                <h2>Historia Sin Título</h2>
+            </div>
+        </div>
+
+        <div class="top-buttons">
+            <a href="User_dise.html">
+                <button class="cancelar-btn">
+                    Cancelar
+                </button>
+            </a>
+
+                <button class="guardar-btn">
+                    Guardar y Continuar
+                </button>
+        </div>
+    </header>
+
+    <!-- CONTENIDO -->
+    <main class="contenedor">
+
+        <!-- PORTADA -->
+        <section class="portada-box">
+            <label for="subirPortada" class="subir-portada">
+                <i class="fa-regular fa-image"></i>
+                <p>Agregar una portada</p>
+                <input type="file" id="subirPortada" hidden>
+            </label>
+        </section>
+
+        <!-- FORMULARIO -->
+        <section class="formulario-box">
+            <h2 class="titulo-form">
+                Detalles de la Historia
+            </h2>
+
+            <!-- TITULO -->
+            <div class="grupo">
+                <label>Título*</label>
+                <input 
+                    type="text"
+                    placeholder="Historia Sin Título"
+                >
+            </div>
+
+            <!-- DESCRIPCION -->
+            <div class="grupo">
+                <label>
+                    Descripción*
+                    <i class="fa-solid fa-circle-info"></i>
+                </label>
+                <textarea></textarea>
+            </div>
+
+            <!-- IDIOMA -->
+            <div class="grupo">
+                <label>
+                    Idioma
+                    <i class="fa-solid fa-circle-info"></i>
+                </label>
+
+                <select>
+                    <option>Español</option>
+                    <option>English</option>
+                </select>
+            </div>
+
+            <!-- TIPO -->
+            <div class="grupo">
+                <label>
+                    Tipo de historia
+                    <i class="fa-solid fa-circle-info"></i>
+                </label>
+
+                <div class="tipos">
+                    <button type="button">Ficción</button>
+                    <button type="button">Fanfic</button>
+                    <button type="button">No ficción</button>
+                    <button type="button">Poesía</button>
+                </div>
+            </div>
+
+            <!-- ETIQUETAS -->
+            <div class="grupo">
+                <label>
+                    Etiquetas
+                    <i class="fa-solid fa-circle-info"></i>
+                </label>
+
+                <input 
+                    type="text"
+                    placeholder="Separa las etiquetas con un espacio"
+                >
+            </div>
+
+            <!-- DERECHOS -->
+            <div class="grupo">
+                <label>
+                    Derechos de autor
+                    <i class="fa-solid fa-circle-info"></i>
+                </label>
+
+                <select>
+                    <option>Todos los derechos reservados</option>
+                    <option>Creative Commons</option>
+                </select>
+
+                <p class="texto-ayuda">
+                    No permites que tu trabajo sea utilizado o adaptado.
+                </p>
+            </div>
+
+            <!-- CLASIFICACION -->
+            <div class="grupo">
+                <label>
+                    Clasificación
+                    <i class="fa-solid fa-circle-info"></i>
+                </label>
+
+                <div class="switch-box">
+                    <span>Contenido adulto</span>
+                    <label class="switch">
+                        <input type="checkbox">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- AUDIENCIA -->
+            <div class="grupo">
+                <label>
+                    Audiencia Principal
+                    <i class="fa-solid fa-circle-info"></i>
+                </label>
+
+                <select>
+                    <option>¿Quién es su audiencia primaria?</option>
+                    <option>Adolescente (13-18 años)</option>
+                    <option>Adulto joven(18-24 años)</option>
+                    <option>Adulto (25+ años)</option>
+                </select>
+            </div>
+        </section>
+    </main>
+    <script src="Historias.js"></script>
+</body>
+</html>

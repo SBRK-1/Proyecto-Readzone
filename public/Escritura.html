@@ -1,0 +1,134 @@
+<!DOCTYPE html><html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"><title>READZONE Editor</title>
+    <link rel="stylesheet" href="Escritura.css"><script src="https://kit.fontawesome.com/dfce23e0ae.js"
+    crossorigin="anonymous"></script>
+</head>
+<body>
+    <header class="topbar">
+        <button id="btnVolver"
+        class="btn-volver">
+            <i class="fa-solid fa-arrow-left"></i>
+        </button>
+        <img id="portadaHistoria" class="portada-mini" src="./imagenes/Asa-mitaka.jpg">
+
+        <div>
+            <h2 id="nombreHistoria">
+                Nueva Historia
+            </h2>
+            <span id="estadoGuardado">
+                <i class="fa-solid fa-cloud"></i>
+                Sin guardar
+            </span>
+        </div>
+
+        <div class="topbar-right">
+            <button id="btnVistaPrevia" class="btn-secundario">
+                Vista previa
+            </button>
+
+            <button id="btnGuardar" class="btn-principal">
+                Guardar
+            </button>
+
+            <button id="btnPublicar" class="btn-publicar">
+                Publicar
+            </button>
+        </div>
+    </header>
+
+<input
+type="file"
+id="inputImagen"
+accept="image/*"
+hidden>
+
+<input
+type="file"
+id="inputVideo"
+accept="video/*"
+hidden>
+
+<main class="editor-layout"><section class="editor-panel">
+
+    <input
+    type="text"
+    id="tituloCapitulo"
+    placeholder="Título del capítulo">
+
+    <div
+    id="contenidoCapitulo"
+    class="editor-wattpad"
+    contenteditable="true"></div>
+
+    <div class="estadisticas">
+        <span id="contadorPalabras">
+            0 palabras
+        </span>
+
+        <span id="contadorCaracteres">
+            0 caracteres
+        </span>
+    </div>
+
+</section>
+
+<aside class="panel-lateral">
+
+    <!-- HERRAMIENTAS MULTIMEDIA
+        BOTONES MOVIDOS DEL BANNER -->
+    <div class="card">
+
+        <h3>Multimedia</h3>
+
+        <button
+        onclick="document.getElementById('inputImagen').click()">
+
+            <i class="fa-solid fa-image"></i>
+            Imagen
+
+        </button>
+
+        <br><br>
+
+        <button
+        id="insertarImagen">
+
+            <i class="fa-solid fa-images"></i>
+            Insertar
+
+        </button>
+
+        <br><br>
+
+        <button
+        onclick="document.getElementById('inputVideo').click()">
+
+            <i class="fa-solid fa-video"></i>
+            Video
+
+        </button>
+
+    </div>
+
+    <!-- INFORMACIÓN -->
+    <div class="card">
+
+        <h3>Información</h3>
+
+        <p id="ultimaEdicion">
+            Última edición:
+            Nunca
+        </p>
+
+    </div>
+
+</aside>
+
+</main><div
+id="toastGuardado"
+class="toast">Guardado correctamente
+
+</div><script src="Escritura.js"></script></body>
+</html>

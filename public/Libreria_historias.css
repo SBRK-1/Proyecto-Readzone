@@ -1,0 +1,89 @@
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+}
+
+body{
+font-family:'Segoe UI',sans-serif;
+background: linear-gradient(135deg, #534bf08c, #d846ef83);
+}
+
+.header-biblioteca{
+padding:40px;
+display:flex;
+justify-content:space-between;
+align-items:center;
+}
+
+.header-biblioteca h1{
+font-size:3rem;
+}
+
+.privado{
+font-size:1rem;
+color:#414040;
+}
+
+.grid-historias{
+display:grid;
+grid-template-columns:
+repeat(auto-fill,minmax(220px,1fr));
+
+gap:25px;
+padding:30px;
+}
+
+.card-historia{
+background:white;
+border-radius:15px;
+overflow:hidden;
+box-shadow:
+0 5px 15px rgba(0,0,0,.08);
+
+cursor:pointer;
+transition:.3s;
+}
+
+.card-historia:hover{
+transform:translateY(-5px);
+}
+
+.card-historia img{
+width:100%;
+height:320px;
+object-fit:cover;
+}
+
+.card-info{
+padding:15px;
+}
+
+.card-info h3{
+margin-bottom:8px;
+}
+
+.card-info p{
+color:#666;
+font-size:.9rem;
+}
+
+.mensaje-vacio{
+display:flex;
+flex-direction:column;
+justify-content:center;
+align-items:center;
+height:70vh;
+text-align:center;
+color:#282525;
+}
+
+.mensaje-vacio i{
+font-size:5rem;
+margin-bottom:20px;
+color:#8b5cf6;
+}
+
+.mensaje-vacio h2{
+margin-bottom:10px;
+}
