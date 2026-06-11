@@ -13,11 +13,7 @@ body{
     justify-content: center;
     align-items: center;
     overflow: hidden;
-    background: linear-gradient(
-        135deg,
-        #4338ca,
-        #7e22ce,
-        #ec4899
+    background: linear-gradient( 135deg, #4338ca, #7e22ce, #ec4899
     );
     position: relative;
 }

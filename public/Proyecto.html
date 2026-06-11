@@ -17,40 +17,41 @@
 
     <!-- NAV -->
     <nav>
-        <div class="logo-nav">
-            READZONE
-        </div>
+        <div class="logo-nav">READZONE</div>
 
         <!-- BUSCADOR -->
         <div class="busqueda">
             <input
-            type="text"
-            id="buscador"
-            placeholder="Buscar historias...">
+                type="text"
+                id="buscador"
+                placeholder="Buscar historias...">
+            <!-- CORREGIDO: el onclick ahora llama buscarHistorias() que está definida en Busqueda_global.js -->
             <button onclick="buscarHistorias()">🔍</button>
         </div>
-        
 
         <div class="perfil-menu">
+            <!-- CORREGIDO: src vacío, se rellena dinámicamente en Proyecto.js -->
             <img
-            src="./imagenes/Asa-mitaka.jpg"
-            class="perfil-img"
-            id="fotoPerfilPrincipal">
+                src="./imagenes/foto-default.png"
+                class="perfil-img"
+                id="fotoPerfilPrincipal"
+                onerror="this.src='https://via.placeholder.com/50x50?text=👤'">
             <i class="fa-solid fa-chevron-down"></i>
             <div class="menu-desplegable">
-                <a href="./User_dise.html">
+                <!-- CORREGIDO: el href se construye con el ID real del usuario en el JS -->
+                <a href="#" id="linkPerfil">
                     <i class="fa-solid fa-user"></i>
                     Mi perfil
                 </a>
 
-                <a href="Libreria_historias.html">
+                <!-- CORREGIDO: el href se construye con el ID real del usuario en el JS -->
+                <a href="#" id="linkBiblioteca">
                     <i class="fa-solid fa-book"></i>
                     Biblioteca
                 </a>
 
                 <hr>
-                <a href="#" class="cerrar"
-                id="cerrarSesion">
+                <a href="#" class="cerrar" id="cerrarSesion">
                     <i class="fa-solid fa-right-from-bracket"></i>
                     Cerrar sesión
                 </a>
@@ -65,15 +66,19 @@
             <!-- POPULARES -->
             <div class="seccion">
                 <h3>Historias Populares</h3>
-                <div class="carrusel" id="populares"></div>
+                <div class="carrusel" id="populares">
+                    <p style="color:#64748b; padding:10px;">Cargando historias populares...</p>
+                </div>
             </div>
 
             <!-- RECIENTES -->
             <div class="seccion">
                 <h3>Historias Recientes</h3>
-
-                <div class="carrusel" id="recientes"></div>
+                <div class="carrusel" id="recientes">
+                    <p style="color:#64748b; padding:10px;">Cargando historias recientes...</p>
+                </div>
             </div>
+
         </section>
     </main>
 
@@ -84,7 +89,8 @@
         <p>Bryan Enmanuel Gutierrez Salgado</p>
     </footer>
 
-<script src="Busqueda_global.js"></script>
-<script src="Proyecto.js"></script>
+    <!-- CORREGIDO: Busqueda_global.js primero, Proyecto.js después -->
+    <script src="Busqueda_global.js"></script>
+    <script src="Proyecto.js"></script>
 </body>
 </html>

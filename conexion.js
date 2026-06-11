@@ -1,40 +1,66 @@
 const express = require("express");
-const mysql = require('mysql2');
-const bcrypt = require("bcrypt");
-const path = require("path");
-const fs = require("fs");
+const mysql   = require("mysql2");
+const bcrypt  = require("bcrypt");
+const path    = require("path");
+const fs      = require("fs");
 
 const app = express();
 
-// ─────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════
 // CONEXIÓN A BASE DE DATOS
-// ─────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════
 
 const pool = mysql.createPool({
-    host: 'acela.proxy.rlwy.net',
-    user: 'root',
-    password: 'CUfMwashpeeRltZckCavAYvzQpWPkaPa',
-    database: 'railway',
-    port: 27816,
+    host:             "acela.proxy.rlwy.net",
+    user:             "root",
+    password:         "CUfMwashpeeRltZckCavAYvzQpWPkaPa",
+    database:         "railway",
+    port:             27816,
     waitForConnections: true,
-    connectionLimit: 10
+    connectionLimit:  10
 }).promise();
 
-// Permitir recibir JSON con límite aumentado para fotos en base64
+// ═══════════════════════════════════════════════════════════════
+// MIDDLEWARE
+// ═══════════════════════════════════════════════════════════════
+
+// CORS — permite que el frontend (cualquier origen en desarrollo) llame al servidor
+app.use((req, res, next) => {
+    res.header("Access-Control-Allow-Origin",  "*");
+    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+    res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    if (req.method === "OPTIONS") return res.sendStatus(200);
+    next();
+});
+
+// JSON con límite ampliado para fotos base64
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
-// Servir archivos estáticos
+// Archivos estáticos
 app.use(express.static("public"));
 
-// ─────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════
+// PÁGINA PRINCIPAL
+// ═══════════════════════════════════════════════════════════════
+
+app.get("/", (req, res) => {
+    const htmlPath = path.join(__dirname, "public", "Presentacion.html");
+    if (fs.existsSync(htmlPath)) {
+        res.sendFile(htmlPath);
+    } else {
+        res.status(404).send("Archivo Presentacion.html no encontrado.");
+    }
+});
+
+// ═══════════════════════════════════════════════════════════════
 // USUARIOS
-// ─────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════
 
 // Obtener todos los usuarios
 app.get("/usuarios", async (req, res) => {
     try {
-        const [filas] = await pool.query("SELECT * FROM usuarios");
+        const [filas] = await pool.query("SELECT id, nombre, usuario, correo, foto_perfil FROM usuarios");
         res.json(filas);
     } catch (error) {
         console.error(error);
@@ -42,29 +68,38 @@ app.get("/usuarios", async (req, res) => {
     }
 });
 
-// Registrar usuario
+// ── Registro ─────────────────────────────────────────────────────
 app.post("/registro", async (req, res) => {
     try {
         const { nombre, usuario, correo, contraseña } = req.body;
 
-        const saltRounds = 10;
-        const passwordHash = await bcrypt.hash(contraseña, saltRounds);
+        if (!nombre || !usuario || !correo || !contraseña) {
+            return res.status(400).json({ success: false, error: "Todos los campos son obligatorios" });
+        }
 
-        await pool.query(
+        // Verificar si el correo o usuario ya existen
+        const [yaExiste] = await pool.query(
+            "SELECT id FROM usuarios WHERE correo = ? OR usuario = ?",
+            [correo, usuario]
+        );
+        if (yaExiste.length > 0) {
+            return res.json({ success: false, error: "El correo o usuario ya está registrado" });
+        }
+
+        const hash = await bcrypt.hash(contraseña, 10);
+
+        const [result] = await pool.query(
             `INSERT INTO usuarios (nombre, usuario, correo, contraseña)
             VALUES (?, ?, ?, ?)`,
-            [nombre, usuario, correo, passwordHash]
+            [nombre, usuario, correo, hash]
         );
 
-        const [usuarioCreado] = await pool.query(
-            "SELECT id, nombre, usuario, correo, foto_perfil FROM usuarios WHERE correo = ?",
-            [correo]
+        const [nuevo] = await pool.query(
+            "SELECT id, nombre, usuario, correo, foto_perfil FROM usuarios WHERE id = ?",
+            [result.insertId]
         );
 
-        res.json({
-            success: true,
-            usuario: usuarioCreado[0]
-        });
+        res.json({ success: true, usuario: nuevo[0] });
 
     } catch (error) {
         console.error(error);
@@ -72,36 +107,39 @@ app.post("/registro", async (req, res) => {
     }
 });
 
-// Login
+// ── Login ────────────────────────────────────────────────────────
 app.post("/login", async (req, res) => {
     try {
         const { correo, contraseña } = req.body;
 
+        if (!correo || !contraseña) {
+            return res.json({ success: false, error: "Faltan datos" });
+        }
+
         const [usuarios] = await pool.query(
-            `SELECT * FROM usuarios WHERE correo = ?`,
+            "SELECT * FROM usuarios WHERE correo = ?",
             [correo]
         );
 
         if (usuarios.length === 0) {
-            return res.json({ success: false });
+            return res.json({ success: false, error: "Credenciales incorrectas" });
         }
 
-        const usuario = usuarios[0];
+        const u = usuarios[0];
+        const coincide = await bcrypt.compare(contraseña, u.contraseña);
 
-        const passwordMatch = await bcrypt.compare(contraseña, usuario.contraseña);
-
-        if (!passwordMatch) {
-            return res.json({ success: false });
+        if (!coincide) {
+            return res.json({ success: false, error: "Credenciales incorrectas" });
         }
 
         res.json({
             success: true,
             usuario: {
-                id:          usuario.id,
-                nombre:      usuario.nombre,
-                usuario:     usuario.usuario,
-                correo:      usuario.correo,
-                foto_perfil: usuario.foto_perfil
+                id:          u.id,
+                nombre:      u.nombre,
+                usuario:     u.usuario,
+                correo:      u.correo,
+                foto_perfil: u.foto_perfil
             }
         });
 
@@ -111,23 +149,20 @@ app.post("/login", async (req, res) => {
     }
 });
 
-// ─────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════
 // PERFIL DE USUARIO
-// ─────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════
 
-// Obtener perfil
+// Obtener perfil por ID
 app.get("/usuario/:id", async (req, res) => {
     try {
-        const id = req.params.id;
-
         const [datos] = await pool.query(
-            `SELECT
-                id, nombre, usuario, correo,
-                foto_perfil, foto_portada,
-                biografia, genero, fecha_registro
+            `SELECT id, nombre, usuario, correo,
+                    foto_perfil, foto_portada,
+                    biografia, genero, fecha_registro
             FROM usuarios
             WHERE id = ?`,
-            [id]
+            [req.params.id]
         );
 
         if (datos.length === 0) {
@@ -146,48 +181,44 @@ app.get("/usuario/:id", async (req, res) => {
 app.put("/usuario/:id", async (req, res) => {
     try {
         const id = req.params.id;
-
-        const {
-            nombre,
-            usuario,
-            foto_perfil,
-            foto_portada,
-            biografia,
-            genero
-        } = req.body;
+        const { nombre, usuario, foto_perfil, foto_portada, biografia, genero } = req.body;
 
         if (!nombre || !usuario) {
             return res.json({ success: false, error: "Nombre y usuario son obligatorios" });
         }
 
+        // Verificar que el usuario no esté ocupado por otra cuenta
         const [existe] = await pool.query(
-            `SELECT id FROM usuarios WHERE usuario = ? AND id <> ?`,
+            "SELECT id FROM usuarios WHERE usuario = ? AND id <> ?",
             [usuario, id]
         );
-
         if (existe.length > 0) {
-            return res.json({ success: false, error: "Ese usuario ya existe" });
+            return res.json({ success: false, error: "Ese nombre de usuario ya está en uso" });
         }
 
+        // Obtener fotos actuales para no pisar con null
         const [actual] = await pool.query(
-            `SELECT foto_perfil, foto_portada FROM usuarios WHERE id = ?`,
+            "SELECT foto_perfil, foto_portada FROM usuarios WHERE id = ?",
             [id]
         );
+
+        if (actual.length === 0) {
+            return res.status(404).json({ success: false, error: "Usuario no encontrado" });
+        }
 
         const fotoPerfilFinal  = foto_perfil  || actual[0].foto_perfil;
         const fotoPortadaFinal = foto_portada || actual[0].foto_portada;
 
         await pool.query(
             `UPDATE usuarios
-            SET
-                nombre       = ?,
+            SET nombre       = ?,
                 usuario      = ?,
                 foto_perfil  = ?,
                 foto_portada = ?,
                 biografia    = ?,
                 genero       = ?
             WHERE id = ?`,
-            [nombre, usuario, fotoPerfilFinal, fotoPortadaFinal, biografia, genero, id]
+            [nombre, usuario, fotoPerfilFinal, fotoPortadaFinal, biografia || "", genero || "No especificado", id]
         );
 
         res.json({ success: true });
@@ -198,26 +229,30 @@ app.put("/usuario/:id", async (req, res) => {
     }
 });
 
-// ─────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════
 // HISTORIAS
-// ─────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════
 
 // Historias populares y recientes (página principal)
 app.get("/historias", async (req, res) => {
     try {
         const [populares] = await pool.query(`
-            SELECT h.*, COUNT(v.id) AS total_vistas
+            SELECT h.*, COUNT(v.id) AS total_vistas,
+                u.nombre AS nombre_autor
             FROM historias h
-            LEFT JOIN vistas v ON h.id = v.historia_id
+            LEFT JOIN vistas   v ON h.id = v.historia_id
+            INNER JOIN usuarios u ON h.usuario_id = u.id
             GROUP BY h.id
             ORDER BY total_vistas DESC
             LIMIT 4
         `);
 
         const [recientes] = await pool.query(`
-            SELECT h.*, COUNT(v.id) AS total_vistas
+            SELECT h.*, COUNT(v.id) AS total_vistas,
+                u.nombre AS nombre_autor
             FROM historias h
-            LEFT JOIN vistas v ON h.id = v.historia_id
+            LEFT JOIN vistas   v ON h.id = v.historia_id
+            INNER JOIN usuarios u ON h.usuario_id = u.id
             GROUP BY h.id
             ORDER BY h.fecha_creacion DESC
             LIMIT 4
@@ -249,236 +284,7 @@ app.get("/historias/:usuarioId", async (req, res) => {
     }
 });
 
-// Registrar vista
-app.post("/vista", async (req, res) => {
-    try {
-        const { usuario_id, historia_id } = req.body;
-
-        await pool.query(
-            `INSERT INTO vistas (usuario_id, historia_id) VALUES (?, ?)`,
-            [usuario_id, historia_id]
-        );
-
-        res.json({ success: true });
-
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ success: false });
-    }
-});
-
-// ─────────────────────────────────────────────
-// PUBLICACIONES
-// ─────────────────────────────────────────────
-
-// Obtener publicaciones con sus respuestas
-app.get("/publicaciones", async (req, res) => {
-    try {
-        const [publicaciones] = await pool.query(`
-            SELECT
-                publicaciones.*,
-                usuarios.nombre,
-                usuarios.usuario,
-                usuarios.foto_perfil
-            FROM publicaciones
-            INNER JOIN usuarios ON publicaciones.usuario_id = usuarios.id
-            ORDER BY publicaciones.fecha DESC
-        `);
-
-        for (let publicacion of publicaciones) {
-            const [respuestas] = await pool.query(`
-                SELECT
-                    respuestas_publicacion.*,
-                    usuarios.nombre,
-                    usuarios.foto_perfil
-                FROM respuestas_publicacion
-                INNER JOIN usuarios ON respuestas_publicacion.usuario_id = usuarios.id
-                WHERE publicacion_id = ?
-                ORDER BY respuestas_publicacion.fecha ASC
-            `, [publicacion.id]);
-
-            publicacion.respuestas = respuestas;
-        }
-
-        res.json(publicaciones);
-
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: "Error al obtener publicaciones" });
-    }
-});
-
-// Crear publicación
-app.post("/publicaciones", async (req, res) => {
-    try {
-        const { usuario_id, texto } = req.body;
-
-        if (!usuario_id || !texto) {
-            return res.json({ success: false, error: "Datos incompletos" });
-        }
-
-        await pool.query(
-            `INSERT INTO publicaciones (usuario_id, texto) VALUES (?, ?)`,
-            [usuario_id, texto]
-        );
-
-        res.json({ success: true });
-
-    } catch (error) {
-        console.error(error);
-        res.json({ success: false, error: error.message });
-    }
-});
-
-// Responder publicación
-app.post("/respuesta", async (req, res) => {
-    try {
-        const { publicacion_id, usuario_id, texto } = req.body;
-
-        await pool.query(
-            `INSERT INTO respuestas_publicacion (publicacion_id, usuario_id, texto)
-            VALUES (?, ?, ?)`,
-            [publicacion_id, usuario_id, texto]
-        );
-
-        res.json({ success: true });
-
-    } catch (error) {
-        console.error(error);
-        res.json({ success: false, error: error.message });
-    }
-});
-
-// Eliminar publicación (y sus respuestas primero)
-app.delete("/publicaciones/:id", async (req, res) => {
-    try {
-        const id = req.params.id;
-
-        await pool.query(
-            `DELETE FROM respuestas_publicacion WHERE publicacion_id = ?`,
-            [id]
-        );
-
-        await pool.query(
-            `DELETE FROM publicaciones WHERE id = ?`,
-            [id]
-        );
-
-        res.json({ success: true });
-
-    } catch (error) {
-        console.error(error);
-        res.json({ success: false, error: error.message });
-    }
-});
-
-// ─────────────────────────────────────────────
-// PÁGINA PRINCIPAL
-// ─────────────────────────────────────────────
-
-app.get("/", (req, res) => {
-    console.log("Entro a la ruta /");
-    res.sendFile(path.join(__dirname, "public", "Presentacion.html"));
-});
-
-console.log(
-    fs.existsSync(path.join(__dirname, "public", "Presentacion.html"))
-);
-
-// ─────────────────────────────────────────────
-// CREAR HISTORIA (desde Modificar_historias)
-// ─────────────────────────────────────────────
-
-app.post("/historias", async (req, res) => {
-    try {
-        const { usuario_id, titulo, descripcion, portada } = req.body;
-
-        const [result] = await pool.query(
-            `INSERT INTO historias (usuario_id, titulo, descripcion, portada)
-            VALUES (?, ?, ?, ?)`,
-            [usuario_id, titulo || "Nueva Historia", descripcion || "", portada || ""]
-        );
-
-        const historiaId = result.insertId;
-
-        // Crear el primer capítulo automáticamente (Prólogo)
-        await pool.query(
-            `INSERT INTO capitulos (historia_id, titulo, contenido, numero_capitulo)
-            VALUES (?, ?, ?, ?)`,
-            [historiaId, "Prólogo", "", 1]
-        );
-
-        res.json({ success: true, historia_id: historiaId });
-
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
-
-// ─────────────────────────────────────────────
-// ELIMINAR HISTORIA (y sus capítulos)
-// ─────────────────────────────────────────────
-
-app.delete("/historias/:id", async (req, res) => {
-    try {
-        const id = req.params.id;
-
-        await pool.query(`DELETE FROM capitulos WHERE historia_id = ?`, [id]);
-        await pool.query(`DELETE FROM historias WHERE id = ?`, [id]);
-
-        res.json({ success: true });
-
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
-
-// ─────────────────────────────────────────────
-// CAPÍTULOS DE UNA HISTORIA
-// ─────────────────────────────────────────────
-
-app.get("/capitulos/:historiaId", async (req, res) => {
-    try {
-        const [capitulos] = await pool.query(
-            `SELECT * FROM capitulos
-            WHERE historia_id = ?
-            ORDER BY numero_capitulo ASC`,
-            [req.params.historiaId]
-        );
-
-        res.json(capitulos);
-
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: "Error al obtener capítulos" });
-    }
-});
-
-// ─────────────────────────────────────────────
-// CREAR CAPÍTULO NUEVO
-// ─────────────────────────────────────────────
-
-app.post("/capitulos", async (req, res) => {
-    try {
-        const { historia_id, titulo, contenido, numero_capitulo } = req.body;
-
-        const [result] = await pool.query(
-            `INSERT INTO capitulos (historia_id, titulo, contenido, numero_capitulo)
-            VALUES (?, ?, ?, ?)`,
-            [historia_id, titulo, contenido || "", numero_capitulo]
-        );
-
-        res.json({ success: true, capitulo_id: result.insertId });
-
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
-
-// POST /historias — Crear historia completa desde el formulario
+// Crear historia (ruta única — reemplaza las dos que existían antes)
 app.post("/historias", async (req, res) => {
     try {
         const {
@@ -494,8 +300,8 @@ app.post("/historias", async (req, res) => {
             contenido_adulto
         } = req.body;
 
-        if (!usuario_id || !titulo) {
-            return res.json({ success: false, error: "Faltan datos obligatorios" });
+        if (!usuario_id) {
+            return res.json({ success: false, error: "Falta usuario_id" });
         }
 
         const [result] = await pool.query(
@@ -506,14 +312,14 @@ app.post("/historias", async (req, res) => {
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
                 usuario_id,
-                titulo,
-                descripcion  || "",
-                portada      || "",
-                idioma       || "Español",
-                categoria    || "",
-                derechos     || "",
-                audiencia    || "",
-                etiquetas    || "",
+                titulo          || "Nueva Historia",
+                descripcion     || "",
+                portada         || "",
+                idioma          || "Español",
+                categoria       || "",
+                derechos        || "",
+                audiencia       || "",
+                etiquetas       || "",
                 contenido_adulto ? 1 : 0
             ]
         );
@@ -530,7 +336,7 @@ app.post("/historias", async (req, res) => {
         res.json({
             success:     true,
             historia_id: historiaId,
-            capitulo_id: capResult.insertId   // ← necesario para Escritura.html
+            capitulo_id: capResult.insertId
         });
 
     } catch (error) {
@@ -539,14 +345,27 @@ app.post("/historias", async (req, res) => {
     }
 });
 
-// ─────────────────────────────────────────────
-// OBTENER UNA HISTORIA POR ID (para el editor)
-// ─────────────────────────────────────────────
+// Eliminar historia (y sus capítulos)
+app.delete("/historias/:id", async (req, res) => {
+    try {
+        const id = req.params.id;
 
+        await pool.query("DELETE FROM capitulos WHERE historia_id = ?",  [id]);
+        await pool.query("DELETE FROM historias  WHERE id = ?",          [id]);
+
+        res.json({ success: true });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// Obtener una historia por ID
 app.get("/historia/:id", async (req, res) => {
     try {
         const [filas] = await pool.query(
-            `SELECT * FROM historias WHERE id = ?`,
+            "SELECT * FROM historias WHERE id = ?",
             [req.params.id]
         );
 
@@ -562,215 +381,7 @@ app.get("/historia/:id", async (req, res) => {
     }
 });
 
-// ─────────────────────────────────────────────
-// OBTENER UN CAPÍTULO POR ID
-// ─────────────────────────────────────────────
-
-app.get("/capitulo/:id", async (req, res) => {
-    try {
-        const [filas] = await pool.query(
-            `SELECT * FROM capitulos WHERE id = ?`,
-            [req.params.id]
-        );
-
-        if (filas.length === 0) {
-            return res.status(404).json({ error: "Capítulo no encontrado" });
-        }
-
-        res.json(filas[0]);
-
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: "Error al obtener el capítulo" });
-    }
-});
-
-// ─────────────────────────────────────────────
-// GUARDAR/ACTUALIZAR CAPÍTULO
-// ─────────────────────────────────────────────
-
-app.put("/capitulo/:id", async (req, res) => {
-    try {
-        const { titulo, contenido } = req.body;
-
-        await pool.query(
-            `UPDATE capitulos
-            SET titulo = ?, contenido = ?, fecha_creacion = NOW()
-            WHERE id = ?`,
-            [titulo, contenido, req.params.id]
-        );
-
-        res.json({ success: true });
-
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
-
-// ─────────────────────────────────────────────
-// PUBLICAR HISTORIA
-// ─────────────────────────────────────────────
-
-app.put("/historia/:id/publicar", async (req, res) => {
-    try {
-        await pool.query(
-            `UPDATE historias SET completa = TRUE WHERE id = ?`,
-            [req.params.id]
-        );
-
-        res.json({ success: true });
-
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
-
-// ─────────────────────────────────────────────
-// CONTAR VISTAS DE UNA HISTORIA
-// ─────────────────────────────────────────────
-
-app.get("/historia/:id/vistas", async (req, res) => {
-    try {
-        const [filas] = await pool.query(
-            `SELECT COUNT(*) AS total FROM vistas WHERE historia_id = ?`,
-            [req.params.id]
-        );
-
-        res.json({ total: filas[0].total });
-
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ total: 0 });
-    }
-});
-
-// ─────────────────────────────────────────────
-// GUARDAR PROGRESO DE LECTURA
-// ─────────────────────────────────────────────
-
-app.post("/progreso", async (req, res) => {
-    try {
-        const { usuario_id, capitulo_id } = req.body;
-
-        // Evitar duplicados: si ya existe ese progreso, actualizarlo
-        const [existe] = await pool.query(
-            `SELECT id FROM progreso_lectura
-            WHERE usuario_id = ? AND capitulo_id = ?`,
-            [usuario_id, capitulo_id]
-        );
-
-        if (existe.length > 0) {
-            await pool.query(
-                `UPDATE progreso_lectura SET fecha = NOW()
-                WHERE usuario_id = ? AND capitulo_id = ?`,
-                [usuario_id, capitulo_id]
-            );
-        } else {
-            await pool.query(
-                `INSERT INTO progreso_lectura (usuario_id, capitulo_id)
-                VALUES (?, ?)`,
-                [usuario_id, capitulo_id]
-            );
-        }
-
-        res.json({ success: true });
-
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
-
-// ─────────────────────────────────────────────
-// OBTENER BIBLIOTECA DEL USUARIO
-// ─────────────────────────────────────────────
-
-app.get("/biblioteca/:usuarioId", async (req, res) => {
-    try {
-        const [historias] = await pool.query(`
-            SELECT
-                h.id,
-                h.titulo,
-                h.portada,
-                h.descripcion,
-                u.nombre  AS nombre_autor,
-                COUNT(c.id) AS total_capitulos
-            FROM biblioteca b
-            INNER JOIN historias h ON b.historia_id = h.id
-            INNER JOIN usuarios  u ON h.usuario_id  = u.id
-            LEFT  JOIN capitulos c ON c.historia_id = h.id
-            WHERE b.usuario_id = ?
-            GROUP BY h.id, h.titulo, h.portada, h.descripcion, u.nombre
-            ORDER BY b.id DESC
-        `, [req.params.usuarioId]);
-
-        res.json(historias);
-
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: "Error al obtener biblioteca" });
-    }
-});
-
-// ─────────────────────────────────────────────
-// AGREGAR HISTORIA A LA BIBLIOTECA
-// ─────────────────────────────────────────────
-
-app.post("/biblioteca", async (req, res) => {
-    try {
-        const { usuario_id, historia_id } = req.body;
-
-        // Evitar duplicados
-        const [existe] = await pool.query(
-            `SELECT id FROM biblioteca
-            WHERE usuario_id = ? AND historia_id = ?`,
-            [usuario_id, historia_id]
-        );
-
-        if (existe.length > 0) {
-            return res.json({ success: true, yaExiste: true });
-        }
-
-        await pool.query(
-            `INSERT INTO biblioteca (usuario_id, historia_id)
-            VALUES (?, ?)`,
-            [usuario_id, historia_id]
-        );
-
-        res.json({ success: true, yaExiste: false });
-
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
-
-// ─────────────────────────────────────────────
-// QUITAR HISTORIA DE LA BIBLIOTECA
-// ─────────────────────────────────────────────
-
-app.delete("/biblioteca/:usuarioId/:historiaId", async (req, res) => {
-    try {
-        await pool.query(
-            `DELETE FROM biblioteca
-            WHERE usuario_id = ? AND historia_id = ?`,
-            [req.params.usuarioId, req.params.historiaId]
-        );
-
-        res.json({ success: true });
-
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
-
-// ─────────────────────────────────────────────
-// ACTUALIZAR DETALLES DE UNA HISTORIA
-// ─────────────────────────────────────────────
-
+// Actualizar detalles de una historia
 app.put("/historia/:id", async (req, res) => {
     try {
         const {
@@ -792,7 +403,7 @@ app.put("/historia/:id", async (req, res) => {
                 etiquetas        = ?,
                 contenido_adulto = ?,
                 completa         = ?
-             WHERE id = ?`,
+            WHERE id = ?`,
             [
                 titulo, descripcion, portada || "",
                 idioma, categoria, derechos,
@@ -811,14 +422,11 @@ app.put("/historia/:id", async (req, res) => {
     }
 });
 
-// ─────────────────────────────────────────────
-// ELIMINAR CAPÍTULO
-// ─────────────────────────────────────────────
-
-app.delete("/capitulo/:id", async (req, res) => {
+// Publicar historia (marcar como completa)
+app.put("/historia/:id/publicar", async (req, res) => {
     try {
         await pool.query(
-            `DELETE FROM capitulos WHERE id = ?`,
+            "UPDATE historias SET completa = TRUE WHERE id = ?",
             [req.params.id]
         );
 
@@ -830,17 +438,57 @@ app.delete("/capitulo/:id", async (req, res) => {
     }
 });
 
-// ─────────────────────────────────────────────
-// REORDENAR CAPÍTULOS (drag and drop)
-// ─────────────────────────────────────────────
+// Vistas de una historia
+app.get("/historia/:id/vistas", async (req, res) => {
+    try {
+        const [filas] = await pool.query(
+            "SELECT COUNT(*) AS total FROM vistas WHERE historia_id = ?",
+            [req.params.id]
+        );
 
+        res.json({ total: filas[0].total });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ total: 0 });
+    }
+});
+
+// Registrar vista
+app.post("/vista", async (req, res) => {
+    try {
+        const { usuario_id, historia_id } = req.body;
+
+        await pool.query(
+            "INSERT INTO vistas (usuario_id, historia_id) VALUES (?, ?)",
+            [usuario_id, historia_id]
+        );
+
+        res.json({ success: true });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false });
+    }
+});
+
+// ═══════════════════════════════════════════════════════════════
+// CAPÍTULOS
+// ═══════════════════════════════════════════════════════════════
+
+// IMPORTANTE: esta ruta debe ir ANTES de /capitulos/:historiaId
+// para que "reordenar" no sea interpretado como un ID numérico.
 app.put("/capitulos/reordenar", async (req, res) => {
     try {
         const { orden } = req.body; // [{ id, numero_capitulo }, ...]
 
+        if (!Array.isArray(orden)) {
+            return res.status(400).json({ success: false, error: "Formato inválido" });
+        }
+
         for (const item of orden) {
             await pool.query(
-                `UPDATE capitulos SET numero_capitulo = ? WHERE id = ?`,
+                "UPDATE capitulos SET numero_capitulo = ? WHERE id = ?",
                 [item.numero_capitulo, item.id]
             );
         }
@@ -853,9 +501,309 @@ app.put("/capitulos/reordenar", async (req, res) => {
     }
 });
 
-// ─────────────────────────────────────────────
-// BÚSQUEDA GLOBAL (historias y usuarios)
-// ─────────────────────────────────────────────
+// Capítulos de una historia
+app.get("/capitulos/:historiaId", async (req, res) => {
+    try {
+        const [capitulos] = await pool.query(
+            `SELECT * FROM capitulos
+            WHERE historia_id = ?
+            ORDER BY numero_capitulo ASC`,
+            [req.params.historiaId]
+        );
+
+        res.json(capitulos);
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Error al obtener capítulos" });
+    }
+});
+
+// Crear capítulo
+app.post("/capitulos", async (req, res) => {
+    try {
+        const { historia_id, titulo, contenido, numero_capitulo } = req.body;
+
+        if (!historia_id || !titulo) {
+            return res.json({ success: false, error: "Faltan datos obligatorios" });
+        }
+
+        const [result] = await pool.query(
+            `INSERT INTO capitulos (historia_id, titulo, contenido, numero_capitulo)
+            VALUES (?, ?, ?, ?)`,
+            [historia_id, titulo, contenido || "", numero_capitulo]
+        );
+
+        res.json({ success: true, capitulo_id: result.insertId });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// Obtener capítulo por ID
+app.get("/capitulo/:id", async (req, res) => {
+    try {
+        const [filas] = await pool.query(
+            "SELECT * FROM capitulos WHERE id = ?",
+            [req.params.id]
+        );
+
+        if (filas.length === 0) {
+            return res.status(404).json({ error: "Capítulo no encontrado" });
+        }
+
+        res.json(filas[0]);
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Error al obtener el capítulo" });
+    }
+});
+
+// Guardar / actualizar capítulo
+app.put("/capitulo/:id", async (req, res) => {
+    try {
+        const { titulo, contenido } = req.body;
+
+        await pool.query(
+            `UPDATE capitulos
+            SET titulo = ?, contenido = ?, fecha_creacion = NOW()
+            WHERE id = ?`,
+            [titulo, contenido, req.params.id]
+        );
+
+        res.json({ success: true });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// Eliminar capítulo
+app.delete("/capitulo/:id", async (req, res) => {
+    try {
+        await pool.query("DELETE FROM capitulos WHERE id = ?", [req.params.id]);
+        res.json({ success: true });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// ═══════════════════════════════════════════════════════════════
+// PUBLICACIONES
+// ═══════════════════════════════════════════════════════════════
+
+// Obtener publicaciones con sus respuestas
+app.get("/publicaciones", async (req, res) => {
+    try {
+        const [publicaciones] = await pool.query(`
+            SELECT
+                publicaciones.*,
+                usuarios.nombre,
+                usuarios.usuario,
+                usuarios.foto_perfil
+            FROM publicaciones
+            INNER JOIN usuarios ON publicaciones.usuario_id = usuarios.id
+            ORDER BY publicaciones.fecha DESC
+        `);
+
+        for (const pub of publicaciones) {
+            const [respuestas] = await pool.query(`
+                SELECT
+                    respuestas_publicacion.*,
+                    usuarios.nombre,
+                    usuarios.foto_perfil
+                FROM respuestas_publicacion
+                INNER JOIN usuarios ON respuestas_publicacion.usuario_id = usuarios.id
+                WHERE publicacion_id = ?
+                ORDER BY respuestas_publicacion.fecha ASC
+            `, [pub.id]);
+
+            pub.respuestas = respuestas;
+        }
+
+        res.json(publicaciones);
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Error al obtener publicaciones" });
+    }
+});
+
+// Crear publicación
+app.post("/publicaciones", async (req, res) => {
+    try {
+        const { usuario_id, texto } = req.body;
+
+        if (!usuario_id || !texto) {
+            return res.json({ success: false, error: "Datos incompletos" });
+        }
+
+        await pool.query(
+            "INSERT INTO publicaciones (usuario_id, texto) VALUES (?, ?)",
+            [usuario_id, texto]
+        );
+
+        res.json({ success: true });
+
+    } catch (error) {
+        console.error(error);
+        res.json({ success: false, error: error.message });
+    }
+});
+
+// Responder publicación
+app.post("/respuesta", async (req, res) => {
+    try {
+        const { publicacion_id, usuario_id, texto } = req.body;
+
+        if (!publicacion_id || !usuario_id || !texto) {
+            return res.json({ success: false, error: "Datos incompletos" });
+        }
+
+        await pool.query(
+            `INSERT INTO respuestas_publicacion (publicacion_id, usuario_id, texto)
+            VALUES (?, ?, ?)`,
+            [publicacion_id, usuario_id, texto]
+        );
+
+        res.json({ success: true });
+
+    } catch (error) {
+        console.error(error);
+        res.json({ success: false, error: error.message });
+    }
+});
+
+// Eliminar publicación (y sus respuestas)
+app.delete("/publicaciones/:id", async (req, res) => {
+    try {
+        const id = req.params.id;
+
+        await pool.query("DELETE FROM respuestas_publicacion WHERE publicacion_id = ?", [id]);
+        await pool.query("DELETE FROM publicaciones WHERE id = ?",                      [id]);
+
+        res.json({ success: true });
+
+    } catch (error) {
+        console.error(error);
+        res.json({ success: false, error: error.message });
+    }
+});
+
+// ═══════════════════════════════════════════════════════════════
+// PROGRESO DE LECTURA
+// ═══════════════════════════════════════════════════════════════
+
+app.post("/progreso", async (req, res) => {
+    try {
+        const { usuario_id, capitulo_id } = req.body;
+
+        const [existe] = await pool.query(
+            "SELECT id FROM progreso_lectura WHERE usuario_id = ? AND capitulo_id = ?",
+            [usuario_id, capitulo_id]
+        );
+
+        if (existe.length > 0) {
+            await pool.query(
+                "UPDATE progreso_lectura SET fecha = NOW() WHERE usuario_id = ? AND capitulo_id = ?",
+                [usuario_id, capitulo_id]
+            );
+        } else {
+            await pool.query(
+                "INSERT INTO progreso_lectura (usuario_id, capitulo_id) VALUES (?, ?)",
+                [usuario_id, capitulo_id]
+            );
+        }
+
+        res.json({ success: true });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// ═══════════════════════════════════════════════════════════════
+// BIBLIOTECA
+// ═══════════════════════════════════════════════════════════════
+
+app.get("/biblioteca/:usuarioId", async (req, res) => {
+    try {
+        const [historias] = await pool.query(`
+            SELECT
+                h.id,
+                h.titulo,
+                h.portada,
+                h.descripcion,
+                u.nombre AS nombre_autor,
+                COUNT(c.id) AS total_capitulos
+            FROM biblioteca b
+            INNER JOIN historias h ON b.historia_id = h.id
+            INNER JOIN usuarios  u ON h.usuario_id  = u.id
+            LEFT  JOIN capitulos c ON c.historia_id = h.id
+            WHERE b.usuario_id = ?
+            GROUP BY h.id, h.titulo, h.portada, h.descripcion, u.nombre
+            ORDER BY b.id DESC
+        `, [req.params.usuarioId]);
+
+        res.json(historias);
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Error al obtener biblioteca" });
+    }
+});
+
+app.post("/biblioteca", async (req, res) => {
+    try {
+        const { usuario_id, historia_id } = req.body;
+
+        const [existe] = await pool.query(
+            "SELECT id FROM biblioteca WHERE usuario_id = ? AND historia_id = ?",
+            [usuario_id, historia_id]
+        );
+
+        if (existe.length > 0) {
+            return res.json({ success: true, yaExiste: true });
+        }
+
+        await pool.query(
+            "INSERT INTO biblioteca (usuario_id, historia_id) VALUES (?, ?)",
+            [usuario_id, historia_id]
+        );
+
+        res.json({ success: true, yaExiste: false });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.delete("/biblioteca/:usuarioId/:historiaId", async (req, res) => {
+    try {
+        await pool.query(
+            "DELETE FROM biblioteca WHERE usuario_id = ? AND historia_id = ?",
+            [req.params.usuarioId, req.params.historiaId]
+        );
+
+        res.json({ success: true });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// ═══════════════════════════════════════════════════════════════
+// BÚSQUEDA GLOBAL
+// ═══════════════════════════════════════════════════════════════
 
 app.get("/buscar", async (req, res) => {
     try {
@@ -863,13 +811,8 @@ app.get("/buscar", async (req, res) => {
 
         const [historias] = await pool.query(`
             SELECT
-                h.id,
-                h.titulo,
-                h.descripcion,
-                h.portada,
-                h.categoria,
-                h.completa,
-                h.contenido_adulto,
+                h.id, h.titulo, h.descripcion, h.portada,
+                h.categoria, h.completa, h.contenido_adulto,
                 h.fecha_creacion,
                 u.nombre  AS nombre_autor,
                 u.usuario AS usuario_autor,
@@ -877,7 +820,7 @@ app.get("/buscar", async (req, res) => {
             FROM historias h
             INNER JOIN usuarios u ON h.usuario_id = u.id
             LEFT  JOIN vistas   v ON h.id = v.historia_id
-            WHERE h.titulo     LIKE ?
+            WHERE h.titulo      LIKE ?
             OR h.descripcion LIKE ?
             OR h.etiquetas   LIKE ?
             OR h.categoria   LIKE ?
@@ -886,12 +829,7 @@ app.get("/buscar", async (req, res) => {
         `, [q, q, q, q]);
 
         const [usuarios] = await pool.query(`
-            SELECT
-                id,
-                nombre,
-                usuario,
-                foto_perfil,
-                biografia
+            SELECT id, nombre, usuario, foto_perfil, biografia
             FROM usuarios
             WHERE nombre  LIKE ?
             OR usuario LIKE ?
@@ -905,10 +843,12 @@ app.get("/buscar", async (req, res) => {
     }
 });
 
-// ─────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════
 // INICIAR SERVIDOR
-// ─────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════
 
-app.listen(3000, () => {
-    console.log("Servidor iniciado en http://localhost:3000");
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
+    console.log(`✅ Servidor iniciado en http://localhost:${PORT}`);
 });

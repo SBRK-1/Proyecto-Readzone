@@ -1,7 +1,9 @@
 // ─────────────────────────────────────────────
-// ESTADO GLOBAL
+// BUSQUEDA_HISTORIAS.JS
+// Maneja la página de resultados de búsqueda
 // ─────────────────────────────────────────────
 
+// ESTADO GLOBAL
 let todosLosResultados = { historias: [], usuarios: [] };
 let tabActual = "historias";
 
@@ -20,12 +22,18 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("tituloBusqueda").textContent =
             `Resultados para: "${query}"`;
         buscarEnServidor(query);
+    } else {
+        // Sin query en la URL: mostrar el panel vacío limpio
+        document.getElementById("tituloBusqueda").textContent =
+            "Escribe algo para buscar";
     }
 
     // Enter en el buscador dentro de esta página
-    buscador.addEventListener("keypress", (e) => {
-        if (e.key === "Enter") ejecutarBusqueda();
-    });
+    if (buscador) {
+        buscador.addEventListener("keypress", (e) => {
+            if (e.key === "Enter") ejecutarBusqueda();
+        });
+    }
 });
 
 // ─────────────────────────────────────────────
@@ -52,6 +60,7 @@ function ejecutarBusqueda() {
 
 // ─────────────────────────────────────────────
 // LLAMADA AL BACKEND
+// CORREGIDO: URL relativa /buscar para funcionar en cualquier entorno
 // ─────────────────────────────────────────────
 
 async function buscarEnServidor(query) {
@@ -60,6 +69,11 @@ async function buscarEnServidor(query) {
 
     try {
         const res  = await fetch(`/buscar?q=${encodeURIComponent(query)}`);
+
+        if (!res.ok) {
+            throw new Error(`Error HTTP: ${res.status}`);
+        }
+
         const data = await res.json();
 
         todosLosResultados = {
@@ -79,65 +93,72 @@ async function buscarEnServidor(query) {
 }
 
 // ─────────────────────────────────────────────
-// APLICAR FILTROS Y ORDEN (sin nueva petición)
+// APLICAR FILTROS Y ORDEN (sin nueva petición al servidor)
 // ─────────────────────────────────────────────
 
 function aplicarFiltros() {
-    const tipo         = document.querySelector('input[name="tipo"]:checked').value;
-    const orden        = document.querySelector('input[name="orden"]:checked').value;
-    const soloCompleta = document.getElementById("filtroCompleta").checked;
-    const soloProgreso = document.getElementById("filtroEnProgreso").checked;
+    const tipoRadio    = document.querySelector('input[name="tipo"]:checked');
+    const ordenRadio   = document.querySelector('input[name="orden"]:checked');
+    const checkCompleta  = document.getElementById("filtroCompleta");
+    const checkProgreso  = document.getElementById("filtroEnProgreso");
+
+    // CORREGIDO: verificar que los elementos existan antes de leer .value/.checked
+    if (!tipoRadio || !ordenRadio || !checkCompleta || !checkProgreso) return;
+
+    const tipo         = tipoRadio.value;
+    const orden        = ordenRadio.value;
+    const soloCompleta = checkCompleta.checked;
+    const soloProgreso = checkProgreso.checked;
 
     let historias = [...todosLosResultados.historias];
     let usuarios  = [...todosLosResultados.usuarios];
 
-    // ── Filtro estado ──
+    // ── Filtro estado ──────────────────────────────────────────
     if (soloCompleta && !soloProgreso) {
-        historias = historias.filter(h => h.completa == 1);
+        // CORREGIDO: comparar con == 1 o con true (MySQL devuelve 1/0)
+        historias = historias.filter(h => h.completa == 1 || h.completa === true);
     } else if (soloProgreso && !soloCompleta) {
-        historias = historias.filter(h => h.completa == 0);
+        historias = historias.filter(h => h.completa == 0 || h.completa === false);
     }
-    // si ambas marcadas → mostrar todo
+    // Si ambas marcadas o ninguna → mostrar todo
 
-    // ── Orden ──
+    // ── Orden ──────────────────────────────────────────────────
     if (orden === "populares") {
-        historias.sort((a, b) => b.total_vistas - a.total_vistas);
+        historias.sort((a, b) => (b.total_vistas || 0) - (a.total_vistas || 0));
     } else {
         historias.sort((a, b) =>
             new Date(b.fecha_creacion) - new Date(a.fecha_creacion));
     }
 
-    // ── Qué sección mostrar según "tipo" ──
-    let mostrarHistorias = tipo === "todo" || tipo === "historias";
-    let mostrarUsuarios  = tipo === "todo" || tipo === "usuarios";
+    // ── Qué sección mostrar según "tipo" ──────────────────────
+    const mostrarHistorias = tipo === "todo" || tipo === "historias";
+    const mostrarUsuarios  = tipo === "todo" || tipo === "usuarios";
 
     renderizarHistorias(mostrarHistorias ? historias : []);
-    renderizarUsuarios(mostrarUsuarios  ? usuarios  : []);
+    renderizarUsuarios(mostrarUsuarios   ? usuarios  : []);
 
     // Tabs: visibilidad según tipo seleccionado
     const tabs = document.getElementById("tabs");
     tabs.style.display = tipo === "todo" ? "flex" : "none";
 
-    // Si el filtro oculta el tab actual, cambiar al otro disponible
+    const listaH = document.getElementById("listaHistorias");
+    const listaU = document.getElementById("listaUsuarios");
+
     if (tipo === "historias") {
-        document.getElementById("listaHistorias").style.display = "block";
-        document.getElementById("listaUsuarios").style.display  = "none";
+        listaH.style.display = "block";
+        listaU.style.display = "none";
     } else if (tipo === "usuarios") {
-        document.getElementById("listaHistorias").style.display = "none";
-        document.getElementById("listaUsuarios").style.display  = "block";
+        listaH.style.display = "none";
+        listaU.style.display = "block";
     } else {
         // "todo" → respetar tab activo
-        document.getElementById("listaHistorias").style.display =
-            tabActual === "historias" ? "block" : "none";
-        document.getElementById("listaUsuarios").style.display  =
-            tabActual === "usuarios"  ? "block" : "none";
+        listaH.style.display = tabActual === "historias" ? "block" : "none";
+        listaU.style.display = tabActual === "usuarios"  ? "block" : "none";
     }
 
-    // Sin resultados
-    const hayHistorias = historias.length > 0;
-    const hayUsuarios  = usuarios.length  > 0;
-    const hayAlgo      = (mostrarHistorias && hayHistorias) ||
-                        (mostrarUsuarios  && hayUsuarios);
+    // ── Sin resultados ────────────────────────────────────────
+    const hayAlgo = (mostrarHistorias && historias.length > 0) ||
+                    (mostrarUsuarios  && usuarios.length  > 0);
     mostrarSinResultados(!hayAlgo);
 }
 
@@ -152,7 +173,7 @@ function renderizarHistorias(historias) {
     if (historias.length === 0) return;
 
     historias.forEach(h => {
-        const portada = h.portada && h.portada.trim() !== ""
+        const portada = (h.portada && h.portada.trim() !== "")
             ? h.portada
             : "https://via.placeholder.com/80x110?text=Sin+portada";
 
@@ -170,16 +191,20 @@ function renderizarHistorias(historias) {
         const card = document.createElement("div");
         card.className = "card-historia";
         card.innerHTML = `
-            <img src="${portada}" alt="Portada de ${h.titulo}"
+            <img
+                src="${portada}"
+                alt="Portada de ${h.titulo}"
                 onerror="this.src='https://via.placeholder.com/80x110?text=?'">
             <div class="card-info">
                 <h3 class="card-titulo">${h.titulo}</h3>
                 <p class="card-autor">
                     <i class="fa-solid fa-pen-nib"></i>
-                    ${h.nombre_autor}
-                    <span class="card-usuario">@${h.usuario_autor}</span>
+                    ${h.nombre_autor || "Autor desconocido"}
+                    <span class="card-usuario">@${h.usuario_autor || ""}</span>
                 </p>
-                ${h.categoria ? `<p class="card-categoria">${h.categoria}</p>` : ""}
+                ${h.categoria
+                    ? `<p class="card-categoria">${h.categoria}</p>`
+                    : ""}
                 <p class="card-desc">${h.descripcion || "Sin descripción"}</p>
                 <div class="card-meta">
                     ${estado}
@@ -189,6 +214,7 @@ function renderizarHistorias(historias) {
             </div>
         `;
 
+        // CORREGIDO: navegar a Lectura.html con el ID de la historia
         card.addEventListener("click", () => {
             window.location.href = `Lectura.html?id=${h.id}`;
         });
@@ -210,24 +236,31 @@ function renderizarUsuarios(usuarios) {
     if (usuarios.length === 0) return;
 
     usuarios.forEach(u => {
-        const foto = u.foto_perfil && u.foto_perfil.trim() !== ""
+        const foto = (u.foto_perfil && u.foto_perfil.trim() !== "")
             ? u.foto_perfil
             : "https://via.placeholder.com/50x50?text=👤";
 
         const card = document.createElement("div");
+        // CORREGIDO: clase "card-usuario-item" para no colisionar con el CSS
+        // de .card-usuario que el CSS original también usa para otro propósito
         card.className = "card-usuario";
         card.innerHTML = `
-            <img src="${foto}" alt="Foto de ${u.nombre}"
+            <img
+                src="${foto}"
+                alt="Foto de ${u.nombre}"
                 onerror="this.src='https://via.placeholder.com/50x50?text=?'">
             <div class="usuario-info">
                 <h3>${u.nombre}</h3>
                 <p class="usuario-handle">@${u.usuario}</p>
-                ${u.biografia ? `<p class="usuario-bio">${u.biografia}</p>` : ""}
+                ${u.biografia
+                    ? `<p class="usuario-bio">${u.biografia}</p>`
+                    : ""}
             </div>
         `;
 
+        // CORREGIDO: navegar al perfil con el ID real del usuario
         card.addEventListener("click", () => {
-            window.location.href = `Perfil.html?id=${u.id}`;
+            window.location.href = `User_dise.html?id=${u.id}`;
         });
 
         lista.appendChild(card);
