@@ -1,106 +1,75 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Editar Historia - READZONE</title>
-
-<link rel="stylesheet" href="Editar_contenido.css">
-
-<script src="https://kit.fontawesome.com/dfce23e0ae.js" crossorigin="anonymous"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editar Historia - READZONE</title>
+    <link rel="stylesheet" href="Editar_contenido.css">
+    <script src="https://kit.fontawesome.com/dfce23e0ae.js" crossorigin="anonymous"></script>
 </head>
 <body>
 
 <header class="header">
-
     <div class="header-left">
-        <i class="fa-solid fa-arrow-left"></i>
+        <button id="btnAtras" class="btn-atras">
+            <i class="fa-solid fa-arrow-left"></i>
+        </button>
         <div>
             <span>Editar Detalles de la Historia</span>
-            <h2 id="nombreHistoria">
-                Historia Sin Título
-            </h2>
+            <h2 id="nombreHistoria">Historia Sin Título</h2>
         </div>
-
     </div>
+
     <div class="header-right">
-        <a href="Modificar_historias.html">
-            <button class="cancelar-btn">
-                Cancelar
-            </button>
-        </a>
-        <a href="Modificar_historias.html">
-            <button class="guardar-btn">
-                Guardar
-            </button>
-        </a>
+        <button class="cancelar-btn" id="cancelarBtn">Cancelar</button>
+        <button class="guardar-btn" id="guardarBtn">Guardar</button>
     </div>
-
 </header>
+
 <main class="editor-container">
 
     <!-- PORTADA -->
     <section class="portada-panel">
         <div class="imagen-box">
-            <img
-                id="portadaPreview"
-                src=""
-                alt="Portada"
-            >
-
+            <img id="portadaPreview" src="" alt="Portada"
+                onerror="this.style.display='none'">
             <button id="editarPortada">
                 <i class="fa-solid fa-pencil"></i>
             </button>
-
-            <input
-                type="file"
-                id="nuevaPortada"
-                hidden
-            >
-
+            <input type="file" id="nuevaPortada" accept="image/*" hidden>
         </div>
 
-        <button class="vista-previa-btn">
+        <button class="vista-previa-btn" id="vistaPrevia">
             Vista previa
         </button>
     </section>
 
     <!-- FORMULARIO -->
     <section class="datos-panel">
+
         <!-- TABS -->
         <div class="tabs">
             <button class="tab activo" data-tab="detalles">
                 Detalles de la Historia
             </button>
-
             <button class="tab" data-tab="contenidos">
                 Tabla de Contenidos
             </button>
         </div>
 
+        <!-- PANEL DETALLES -->
         <div class="contenido" id="detallesPanel">
-            
-            <!-- TITULO -->
+
             <div class="grupo">
                 <label>Título</label>
-                <input
-                    type="text"
-                    id="tituloHistoria"
-                >
+                <input type="text" id="tituloHistoria">
             </div>
 
-            <!-- DESCRIPCION -->
             <div class="grupo">
-
-                <label>
-                    Descripción
-                    <i class="fa-solid fa-circle-info"></i>
-                </label>
-
+                <label>Descripción <i class="fa-solid fa-circle-info"></i></label>
                 <textarea id="descripcionHistoria"></textarea>
             </div>
 
-            <!-- CATEGORIA -->
             <div class="grupo">
                 <label>Categoría</label>
                 <select id="categoria">
@@ -113,16 +82,12 @@
                 </select>
             </div>
 
-            <!-- ETIQUETAS -->
             <div class="grupo">
                 <label>Etiquetas</label>
-                <input
-                    type="text"
-                    id="etiquetas"
-                >
+                <input type="text" id="etiquetas"
+                    placeholder="Separa las etiquetas con un espacio">
             </div>
 
-            <!-- AUDIENCIA -->
             <div class="grupo">
                 <label>Audiencia Principal</label>
                 <select id="audiencia">
@@ -132,7 +97,6 @@
                 </select>
             </div>
 
-            <!-- IDIOMA -->
             <div class="grupo">
                 <label>Idioma</label>
                 <select id="idioma">
@@ -141,65 +105,48 @@
                 </select>
             </div>
 
-            <!-- DERECHOS -->
             <div class="grupo">
                 <label>Derechos de Autor</label>
                 <select id="derechos">
-                    <option>
-                        Todos los derechos reservados
-                    </option>
-
-                    <option>
-                        Creative Commons
-                    </option>
+                    <option>Todos los derechos reservados</option>
+                    <option>Creative Commons</option>
                 </select>
             </div>
 
-            <!-- CLASIFICACION -->
             <div class="grupo">
                 <label>Clasificación</label>
                 <div class="switch-box">
-                    <span>Madura</span>
+                    <span>Contenido adulto</span>
                     <label class="switch">
-                        <input
-                            type="checkbox"
-                            id="contenidoAdulto"
-                        >
+                        <input type="checkbox" id="contenidoAdulto">
                         <span class="slider"></span>
                     </label>
                 </div>
             </div>
 
-            <!-- ESTADO -->
             <div class="grupo">
                 <label>Estado de la Historia</label>
                 <div class="switch-box">
                     <span>¿Completa?</span>
                     <label class="switch">
-                        <input
-                            type="checkbox"
-                            id="historiaCompleta"
-                        >
-
+                        <input type="checkbox" id="historiaCompleta">
                         <span class="slider"></span>
                     </label>
                 </div>
             </div>
         </div>
 
-        <!--  Contenidos  -->
+        <!-- PANEL CAPÍTULOS -->
         <div class="contenido oculto" id="capitulosPanel">
-            <button class="nuevo-capitulo-btn">
-                + Nuevo Capítulo
+            <button class="nuevo-capitulo-btn" id="nuevoCapituloBtn">
+                <i class="fa-solid fa-plus"></i> Nuevo Capítulo
             </button>
-            <div id="listaCapitulos">
-            </div>
+            <div id="listaCapitulos"></div>
         </div>
-    </section>
 
+    </section>
 </main>
 
 <script src="Editar_contenido.js"></script>
-
 </body>
 </html>
