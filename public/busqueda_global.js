@@ -1,34 +1,25 @@
+// busqueda_global.js
+
 function buscarHistoria() {
+    const texto = document.getElementById("buscador")
+        .value
+        .trim();
 
-    const texto =
-    document.getElementById("buscador")
-    .value
-    .trim();
-
-    if(texto === ""){
+    if (texto === "") {
         alert("Escribe algo para buscar");
         return;
     }
 
     window.location.href =
-    `Busqueda_historias.html?q=${encodeURIComponent(texto)}`;
+        `Busqueda_historias.html?q=${encodeURIComponent(texto)}`;
 }
 
-document.addEventListener("DOMContentLoaded", ()=>{
+document.addEventListener("DOMContentLoaded", () => {
+    const buscador = document.getElementById("buscador");
 
-    const buscador =
-    document.getElementById("buscador");
-
-    if(buscador){
-
-        buscador.addEventListener("keypress",(e)=>{
-
-            if(e.key === "Enter"){
-                buscarHistoria();
-            }
-
+    if (buscador) {
+        buscador.addEventListener("keypress", (e) => {
+            if (e.key === "Enter") buscarHistoria();
         });
-
     }
-
 });

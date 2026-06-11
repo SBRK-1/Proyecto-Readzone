@@ -9,23 +9,25 @@ const capituloInicial = parseInt(localStorage.getItem("capituloInicial") || "0")
 // ELEMENTOS
 // ─────────────────────────────────────────────
 
-const nombreHistoriaEl    = document.getElementById("nombreHistoria");
-const nombreHistoriaTop   = document.getElementById("nombreHistoriaTop");
-const listaCapitulosEl    = document.getElementById("listaCapitulos");
-const tituloCapituloEl    = document.getElementById("tituloCapitulo");
-const contenidoEl         = document.getElementById("contenidoCapitulo");
-const btnAnterior         = document.getElementById("btnAnterior");
-const btnSiguiente        = document.getElementById("btnSiguiente");
-const btnVolver           = document.getElementById("btnVolver");
-const btnToggleSidebar    = document.getElementById("btnToggleSidebar");
-const sidebar             = document.getElementById("sidebar");
+const nombreHistoriaEl  = document.getElementById("nombreHistoria");
+const nombreHistoriaTop = document.getElementById("nombreHistoriaTop");
+const listaCapitulosEl  = document.getElementById("listaCapitulos");
+const tituloCapituloEl  = document.getElementById("tituloCapitulo");
+const contenidoEl       = document.getElementById("contenidoCapitulo");
+const btnAnterior       = document.getElementById("btnAnterior");
+const btnSiguiente      = document.getElementById("btnSiguiente");
+const btnVolver         = document.getElementById("btnVolver");
+const btnToggleSidebar  = document.getElementById("btnToggleSidebar");
+const btnCerrarSidebar  = document.getElementById("btnCerrarSidebar");
+const sidebar           = document.getElementById("sidebar");
+const overlay           = document.getElementById("overlay");
 
 // ─────────────────────────────────────────────
 // ESTADO
 // ─────────────────────────────────────────────
 
-let capitulos      = [];
-let indiceActual   = capituloInicial;
+let capitulos    = [];
+let indiceActual = capituloInicial;
 
 // ─────────────────────────────────────────────
 // ARRANQUE
@@ -61,6 +63,8 @@ async function cargarHistoria() {
 
     } catch (err) {
         console.error("Error al cargar historia:", err);
+        nombreHistoriaEl.textContent  = "Error al cargar";
+        nombreHistoriaTop.textContent = "Error al cargar";
     }
 }
 
@@ -84,11 +88,15 @@ async function cargarCapitulos() {
         // Construir sidebar
         capitulos.forEach((cap, index) => {
             const div = document.createElement("div");
-            div.className    = "capitulo-item";
+            div.className     = "capitulo-item";
             div.dataset.index = index;
-            div.textContent  = cap.titulo || `Capítulo ${index + 1}`;
+            div.textContent   = cap.titulo || `Capítulo ${index + 1}`;
 
-            div.onclick = () => mostrarCapitulo(index);
+            div.addEventListener("click", () => {
+                mostrarCapitulo(index);
+                cerrarSidebar(); // cerrar en móvil al seleccionar
+            });
+
             listaCapitulosEl.appendChild(div);
         });
 
@@ -114,12 +122,20 @@ async function mostrarCapitulo(index) {
 
     tituloCapituloEl.textContent = cap.titulo || `Capítulo ${index + 1}`;
 
+    // Mostrar spinner mientras carga
+    contenidoEl.innerHTML =
+        `<p class="texto-cargando">
+            <i class="fa-solid fa-spinner fa-spin"></i> Cargando contenido...
+        </p>`;
+
     // Cargar contenido fresco del servidor
     try {
-        const res      = await fetch(`/capitulo/${cap.id}`);
-        const detalle  = await res.json();
+        const res     = await fetch(`/capitulo/${cap.id}`);
+        const detalle = await res.json();
 
-        contenidoEl.innerHTML = detalle.contenido || "<p>Este capítulo no tiene contenido aún.</p>";
+        contenidoEl.innerHTML = detalle.contenido
+            ? detalle.contenido
+            : "<p>Este capítulo no tiene contenido aún.</p>";
 
     } catch (err) {
         console.error("Error al cargar capítulo:", err);
@@ -138,16 +154,18 @@ async function mostrarCapitulo(index) {
     }
 
     // Botones de navegación
-    btnAnterior.style.display = index > 0 ? "inline-flex" : "none";
-    btnSiguiente.style.display = index < capitulos.length - 1 ? "inline-flex" : "none";
+    btnAnterior.style.display  = index > 0 ? "inline-flex" : "none";
+    btnSiguiente.style.display = "inline-flex";
 
     // Si es el último capítulo, cambiar texto del botón
     if (index === capitulos.length - 1) {
         btnSiguiente.innerHTML =
             `<i class="fa-solid fa-check"></i> Fin de la historia`;
+        btnSiguiente.disabled = true;
     } else {
         btnSiguiente.innerHTML =
             `Siguiente capítulo <i class="fa-solid fa-chevron-right"></i>`;
+        btnSiguiente.disabled = false;
     }
 
     // Scroll al inicio del lector
@@ -162,15 +180,11 @@ async function mostrarCapitulo(index) {
 // ─────────────────────────────────────────────
 
 btnAnterior.addEventListener("click", () => {
-    if (indiceActual > 0) {
-        mostrarCapitulo(indiceActual - 1);
-    }
+    if (indiceActual > 0) mostrarCapitulo(indiceActual - 1);
 });
 
 btnSiguiente.addEventListener("click", () => {
-    if (indiceActual < capitulos.length - 1) {
-        mostrarCapitulo(indiceActual + 1);
-    }
+    if (indiceActual < capitulos.length - 1) mostrarCapitulo(indiceActual + 1);
 });
 
 // ─────────────────────────────────────────────
@@ -182,12 +196,29 @@ btnVolver.addEventListener("click", () => {
 });
 
 // ─────────────────────────────────────────────
-// TOGGLE SIDEBAR EN MÓVIL
+// SIDEBAR: abrir / cerrar
 // ─────────────────────────────────────────────
 
+function abrirSidebar() {
+    sidebar.classList.add("abierto");
+    overlay.classList.add("visible");
+}
+
+function cerrarSidebar() {
+    sidebar.classList.remove("abierto");
+    overlay.classList.remove("visible");
+}
+
 btnToggleSidebar.addEventListener("click", () => {
-    sidebar.classList.toggle("abierto");
+    if (sidebar.classList.contains("abierto")) {
+        cerrarSidebar();
+    } else {
+        abrirSidebar();
+    }
 });
+
+btnCerrarSidebar.addEventListener("click", cerrarSidebar);
+overlay.addEventListener("click", cerrarSidebar);
 
 // ─────────────────────────────────────────────
 // GUARDAR PROGRESO DE LECTURA EN EL SERVIDOR
@@ -213,7 +244,6 @@ async function guardarProgreso(capituloId) {
         });
 
     } catch (err) {
-        // Silencioso
         console.error("Error al guardar progreso:", err);
     }
 }

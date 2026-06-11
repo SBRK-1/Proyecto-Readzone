@@ -3,106 +3,109 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <title>Resultados - READZONE</title>
-
 <link rel="stylesheet" href="Busqueda_historias.css">
-
 <script src="https://kit.fontawesome.com/dfce23e0ae.js" crossorigin="anonymous"></script>
-
 </head>
 <body>
 
 <!-- NAVBAR -->
-
 <nav>
-
-    <div class="logo-nav">
-        READZONE
-    </div>
+    <div class="logo-nav">READZONE</div>
 
     <div class="busqueda">
-
         <input
-        type="text"
-        id="buscador"
-        placeholder="Buscar historias...">
-
-        <button onclick="buscarHistorias()">
+            type="text"
+            id="buscador"
+            placeholder="Buscar historias o usuarios..."
+        >
+        <button onclick="ejecutarBusqueda()">
             <i class="fa-solid fa-magnifying-glass"></i>
         </button>
-
     </div>
-
 </nav>
 
-<!-- CONTENEDOR -->
-
+<!-- CONTENEDOR PRINCIPAL -->
 <div class="contenedor">
 
-    <!-- FILTROS -->
-
+    <!-- FILTROS (sidebar) -->
     <aside class="filtros">
-
         <h2>Filtros</h2>
 
-        <h3>Estado</h3>
-
+        <h3>Tipo</h3>
         <label>
-            <input type="checkbox">
-            Completadas
+            <input type="radio" name="tipo" value="todo" checked onchange="aplicarFiltros()">
+            Todo
+        </label>
+        <label>
+            <input type="radio" name="tipo" value="historias" onchange="aplicarFiltros()">
+            Solo historias
+        </label>
+        <label>
+            <input type="radio" name="tipo" value="usuarios" onchange="aplicarFiltros()">
+            Solo usuarios
         </label>
 
+        <h3>Estado</h3>
         <label>
-            <input type="checkbox">
+            <input type="checkbox" id="filtroCompleta" onchange="aplicarFiltros()">
+            Completadas
+        </label>
+        <label>
+            <input type="checkbox" id="filtroEnProgreso" onchange="aplicarFiltros()">
             En progreso
         </label>
 
         <h3>Ordenar por</h3>
-
         <label>
-            <input type="radio" name="orden">
+            <input type="radio" name="orden" value="recientes" checked onchange="aplicarFiltros()">
             Más recientes
         </label>
-
         <label>
-            <input type="radio" name="orden">
+            <input type="radio" name="orden" value="populares" onchange="aplicarFiltros()">
             Más populares
         </label>
-
     </aside>
 
     <!-- RESULTADOS -->
-
     <section class="resultados">
 
-        <h1 id="tituloBusqueda">
-            Resultados de búsqueda
-        </h1>
+        <h1 id="tituloBusqueda">Resultados de búsqueda</h1>
 
-        <div id="listaResultados">
-
+        <!-- Tabs -->
+        <div class="tabs" id="tabs">
+            <button class="tab activo" data-tab="historias" onclick="cambiarTab(this)">
+                <i class="fa-solid fa-book"></i> Historias
+                <span class="badge" id="badgeHistorias">0</span>
+            </button>
+            <button class="tab" data-tab="usuarios" onclick="cambiarTab(this)">
+                <i class="fa-solid fa-user"></i> Usuarios
+                <span class="badge" id="badgeUsuarios">0</span>
+            </button>
         </div>
 
-        <div id="sinResultados">
+        <!-- Lista historias -->
+        <div id="listaHistorias"></div>
 
+        <!-- Lista usuarios -->
+        <div id="listaUsuarios" style="display:none;"></div>
+
+        <!-- Sin resultados -->
+        <div id="sinResultados" style="display:none;">
             <i class="fa-solid fa-book-open"></i>
+            <h2>No se encontraron resultados</h2>
+            <p>Intenta con otro término de búsqueda.</p>
+        </div>
 
-            <h2>
-                No se encontraron resultados
-            </h2>
-
-            <p>
-                Busca otra cosa.
-            </p>
-
+        <!-- Cargando -->
+        <div id="cargando" style="display:none;">
+            <i class="fa-solid fa-spinner fa-spin"></i>
+            <p>Buscando...</p>
         </div>
 
     </section>
-
 </div>
 
 <script src="Busqueda_historias.js"></script>
-
 </body>
 </html>

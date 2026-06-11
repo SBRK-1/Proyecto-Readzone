@@ -782,16 +782,16 @@ app.put("/historia/:id", async (req, res) => {
 
         await pool.query(
             `UPDATE historias
-             SET titulo           = ?,
-                 descripcion      = ?,
-                 portada          = ?,
-                 idioma           = ?,
-                 categoria        = ?,
-                 derechos         = ?,
-                 audiencia        = ?,
-                 etiquetas        = ?,
-                 contenido_adulto = ?,
-                 completa         = ?
+            SET titulo           = ?,
+                descripcion      = ?,
+                portada          = ?,
+                idioma           = ?,
+                categoria        = ?,
+                derechos         = ?,
+                audiencia        = ?,
+                etiquetas        = ?,
+                contenido_adulto = ?,
+                completa         = ?
              WHERE id = ?`,
             [
                 titulo, descripcion, portada || "",
@@ -850,6 +850,58 @@ app.put("/capitulos/reordenar", async (req, res) => {
     } catch (error) {
         console.error(error);
         res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// ─────────────────────────────────────────────
+// BÚSQUEDA GLOBAL (historias y usuarios)
+// ─────────────────────────────────────────────
+
+app.get("/buscar", async (req, res) => {
+    try {
+        const q = `%${req.query.q || ""}%`;
+
+        const [historias] = await pool.query(`
+            SELECT
+                h.id,
+                h.titulo,
+                h.descripcion,
+                h.portada,
+                h.categoria,
+                h.completa,
+                h.contenido_adulto,
+                h.fecha_creacion,
+                u.nombre  AS nombre_autor,
+                u.usuario AS usuario_autor,
+                COUNT(v.id) AS total_vistas
+            FROM historias h
+            INNER JOIN usuarios u ON h.usuario_id = u.id
+            LEFT  JOIN vistas   v ON h.id = v.historia_id
+            WHERE h.titulo     LIKE ?
+            OR h.descripcion LIKE ?
+            OR h.etiquetas   LIKE ?
+            OR h.categoria   LIKE ?
+            GROUP BY h.id, u.nombre, u.usuario
+            ORDER BY h.fecha_creacion DESC
+        `, [q, q, q, q]);
+
+        const [usuarios] = await pool.query(`
+            SELECT
+                id,
+                nombre,
+                usuario,
+                foto_perfil,
+                biografia
+            FROM usuarios
+            WHERE nombre  LIKE ?
+            OR usuario LIKE ?
+        `, [q, q]);
+
+        res.json({ historias, usuarios });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Error en la búsqueda" });
     }
 });
 

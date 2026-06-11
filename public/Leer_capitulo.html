@@ -11,40 +11,54 @@
 
     <!-- BARRA SUPERIOR -->
     <header class="topbar-lector">
-        <button id="btnVolver" class="btn-volver">
+        <button id="btnVolver" class="btn-icono" title="Volver">
             <i class="fa-solid fa-arrow-left"></i>
         </button>
-        <span id="nombreHistoriaTop">Cargando...</span>
-        <button id="btnToggleSidebar" class="btn-sidebar">
+
+        <span id="nombreHistoriaTop" class="titulo-top">Cargando...</span>
+
+        <button id="btnToggleSidebar" class="btn-icono" title="Tabla de contenido">
             <i class="fa-solid fa-list"></i>
         </button>
     </header>
 
-    <div class="contenedor">
+    <!-- OVERLAY para cerrar sidebar en móvil -->
+    <div class="overlay" id="overlay"></div>
 
-        <!-- TABLA DE CONTENIDO (sidebar) -->
+    <div class="contenedor-lector">
+
+        <!-- SIDEBAR: tabla de contenido -->
         <aside class="sidebar" id="sidebar">
-            <h2 id="nombreHistoria">Historia</h2>
+            <div class="sidebar-header">
+                <h2 id="nombreHistoria">Historia</h2>
+                <button class="btn-cerrar-sidebar" id="btnCerrarSidebar" title="Cerrar">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
             <div id="listaCapitulos">
-                <p style="padding:12px;font-size:14px;">Cargando...</p>
+                <p class="sidebar-cargando">Cargando capítulos...</p>
             </div>
         </aside>
 
-        <!-- LECTOR -->
-        <main class="lector">
+        <!-- LECTOR PRINCIPAL -->
+        <main class="lector" id="lector">
 
-            <h1 id="tituloCapitulo">Cargando...</h1>
+            <h1 id="tituloCapitulo" class="titulo-capitulo">Cargando...</h1>
 
-            <div id="contenidoCapitulo" class="contenido-texto"></div>
+            <div id="contenidoCapitulo" class="contenido-texto">
+                <p class="texto-cargando">
+                    <i class="fa-solid fa-spinner fa-spin"></i> Cargando contenido...
+                </p>
+            </div>
 
-            <!-- NAVEGACIÓN -->
+            <!-- NAVEGACIÓN ENTRE CAPÍTULOS -->
             <div class="navegacion">
-                <button id="btnAnterior" class="btn-nav" style="display:none;">
+                <button id="btnAnterior" class="btn-nav btn-anterior" style="display:none;">
                     <i class="fa-solid fa-chevron-left"></i>
                     Capítulo anterior
                 </button>
 
-                <button id="btnSiguiente" class="btn-nav">
+                <button id="btnSiguiente" class="btn-nav btn-siguiente" style="display:none;">
                     Siguiente capítulo
                     <i class="fa-solid fa-chevron-right"></i>
                 </button>
