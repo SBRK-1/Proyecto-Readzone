@@ -1,43 +1,58 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport"
-content="width=device-width, initial-scale=1.0">
-<title>Leer Historia</title>
-<link rel="stylesheet"
-href="Leer_capitulo.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leer - READZONE</title>
+    <link rel="stylesheet" href="Leer_capitulo.css">
+    <script src="https://kit.fontawesome.com/dfce23e0ae.js" crossorigin="anonymous"></script>
 </head>
-
 <body>
-<div class="contenedor">
 
-    <!-- TABLA DE CONTENIDO -->
-    <aside class="sidebar">
-        <h2 id="nombreHistoria">
-            Historia
-        </h2>
-        <div id="listaCapitulos">
-        </div>
-    </aside>
+    <!-- BARRA SUPERIOR -->
+    <header class="topbar-lector">
+        <button id="btnVolver" class="btn-volver">
+            <i class="fa-solid fa-arrow-left"></i>
+        </button>
+        <span id="nombreHistoriaTop">Cargando...</span>
+        <button id="btnToggleSidebar" class="btn-sidebar">
+            <i class="fa-solid fa-list"></i>
+        </button>
+    </header>
 
-    <!-- CONTENIDO -->
-    <main class="lector">
-        <h1 id="tituloCapitulo"></h1>
-        <div id="contenidoCapitulo">
-        </div>
+    <div class="contenedor">
 
-        <!-- SIGUIENTE -->
-        <div class="navegacion">
-            <button
-            id="btnSiguiente">
-                Siguiente capítulo →
-            </button>
-        </div>
-    </main>
-</div>
+        <!-- TABLA DE CONTENIDO (sidebar) -->
+        <aside class="sidebar" id="sidebar">
+            <h2 id="nombreHistoria">Historia</h2>
+            <div id="listaCapitulos">
+                <p style="padding:12px;font-size:14px;">Cargando...</p>
+            </div>
+        </aside>
 
-<script src="Leer_capitulo.js"></script>
+        <!-- LECTOR -->
+        <main class="lector">
 
+            <h1 id="tituloCapitulo">Cargando...</h1>
+
+            <div id="contenidoCapitulo" class="contenido-texto"></div>
+
+            <!-- NAVEGACIÓN -->
+            <div class="navegacion">
+                <button id="btnAnterior" class="btn-nav" style="display:none;">
+                    <i class="fa-solid fa-chevron-left"></i>
+                    Capítulo anterior
+                </button>
+
+                <button id="btnSiguiente" class="btn-nav">
+                    Siguiente capítulo
+                    <i class="fa-solid fa-chevron-right"></i>
+                </button>
+            </div>
+
+        </main>
+    </div>
+
+    <script src="Leer_capitulo.js"></script>
 </body>
 </html>

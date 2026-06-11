@@ -1,10 +1,11 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Historia</title>
-<link rel="stylesheet" href="Mostrar_historia.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Historia - READZONE</title>
+    <link rel="stylesheet" href="Mostrar_historia.css">
+    <script src="https://kit.fontawesome.com/dfce23e0ae.js" crossorigin="anonymous"></script>
 </head>
 <body>
 
@@ -13,77 +14,62 @@
     <!-- INFORMACIÓN DE LA HISTORIA -->
     <section class="info-historia">
 
-        <img id="portadaHistoria"
-        class="portada">
+        <img id="portadaHistoria" class="portada"
+            src="./imagenes/Asa-mitaka.jpg"
+            onerror="this.src='./imagenes/Asa-mitaka.jpg'">
 
         <div class="datos">
 
-            <h1 id="tituloHistoria">
-                Título
-            </h1>
+            <h1 id="tituloHistoria">Cargando...</h1>
 
-            <p id="autorHistoria">
-                Autor
-            </p>
-
-            <div class="estadisticas">
-                <span>
-                    👁️ <span id="vistas">0</span>
-                </span>
-
-                <span>
-                    📚 <span id="cantidadCapitulos">0</span> capítulos
-                </span>
+            <div class="autor-info">
+                <img id="fotoAutor" class="foto-autor"
+                    src="./imagenes/Asa-mitaka.jpg"
+                    onerror="this.src='./imagenes/Asa-mitaka.jpg'">
+                <p id="autorHistoria">Autor</p>
             </div>
 
+            <div class="estadisticas">
+                <span>👁️ <span id="vistas">0</span> vistas</span>
+                <span>📚 <span id="cantidadCapitulos">0</span> capítulos</span>
+                <span id="badgeAdulto" class="badge-adulto" style="display:none">🔞 Adulto</span>
+                <span id="badgeCompleta" class="badge-completa" style="display:none">✅ Completa</span>
+            </div>
+
+            <p id="etiquetasHistoria" class="etiquetas"></p>
+
             <button id="btnLeer">
+                <i class="fa-solid fa-book-open"></i>
                 Comenzar lectura
             </button>
+
         </div>
     </section>
 
     <!-- PESTAÑAS -->
-<section class="contenido-historia">
+    <section class="contenido-historia">
 
-    <div class="tabs">
+        <div class="tabs">
+            <button class="tab-btn activo" data-tab="resumen">Resumen</button>
+            <button class="tab-btn" data-tab="capitulos">Capítulos</button>
+        </div>
 
-        <button
-        class="tab-btn activo"
-        data-tab="resumen">
-            Resumen
-        </button>
+        <!-- RESUMEN -->
+        <div id="tabResumen" class="tab-contenido activo">
+            <p id="descripcionHistoria">Cargando descripción...</p>
+        </div>
 
-        <button
-        class="tab-btn"
-        data-tab="capitulos">
-            Capítulos
-        </button>
+        <!-- CAPÍTULOS -->
+        <div id="tabCapitulos" class="tab-contenido">
+            <div id="listaCapitulos">
+                <p style="padding:16px;">Cargando capítulos...</p>
+            </div>
+        </div>
 
-    </div>
-
-    <!-- CONTENIDO RESUMEN -->
-    <div
-    id="tabResumen"
-    class="tab-contenido activo">
-
-        <p id="descripcionHistoria"></p>
-
-    </div>
-
-    <!-- CONTENIDO CAPÍTULOS -->
-    <div
-    id="tabCapitulos"
-    class="tab-contenido">
-
-        <div id="listaCapitulos"></div>
-
-    </div>
-
-</section>
+    </section>
 
 </div>
 
 <script src="Mostrar_historia.js"></script>
-
 </body>
 </html>

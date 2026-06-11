@@ -1,356 +1,313 @@
-const lista =
-document.getElementById("listaHistorias");
+// ─────────────────────────────────────────────
+// CONFIGURACIÓN
+// ─────────────────────────────────────────────
 
-let historias =
-JSON.parse(
-localStorage.getItem("historiasREADZONE")
-) || [];
+const API = ""; // Si el JS corre desde el mismo origen que Express, déjalo vacío
 
-mostrarHistorias();
-
-document
-.getElementById("crearHistoria")
-.addEventListener("click",(e)=>{
-
-e.preventDefault();
-
-let historias =
-JSON.parse(
-localStorage.getItem("historiasREADZONE")
-) || [];
-
-const nuevaHistoria = {
-
-titulo:"Nueva Historia",
-
-contenido:"",
-
-portada:"./imagenes/Asa-mitaka.jpg",
-
-imagen:"",
-
-video:"",
-
-capitulos:[
-    {
-        titulo:"Prologo",
-
-        contenido:"",
-
-        ultimaEdicion: new Date().toLocaleString()
-
-    }
-]
-
-};
-
-historias.push(nuevaHistoria);
-
-localStorage.setItem(
-"historiasREADZONE",
-JSON.stringify(historias)
+// Obtener usuario logueado desde sessionStorage/localStorage
+const usuarioSesion = JSON.parse(
+    sessionStorage.getItem("usuarioREADZONE") ||
+    localStorage.getItem("usuarioREADZONE") ||
+    "null"
 );
 
-const nuevoIndex =
-historias.length - 1;
+const lista = document.getElementById("listaHistorias");
 
-localStorage.setItem(
-"HistoriaEditando",
-nuevoIndex
-);
+// ─────────────────────────────────────────────
+// INICIO
+// ─────────────────────────────────────────────
 
-location.href =
-"Escritura.html";
-
-});
-
-function mostrarHistorias(){
-
-    lista.innerHTML = "";
-
-    historias.forEach((historia,index)=>{
-
-        const card =
-        document.createElement("div");
-
-        card.classList.add("card-historia");
-
-        card.innerHTML = `
-
-        <img
-        src="${historia.portada}"
-        class="portada">
-
-        <div class="info">
-
-            <h2>${historia.titulo}</h2>
-
-            <p class="fecha">
-                Última edición:
-                ${new Date().toLocaleDateString()}
-            </p>
-
-            <div class="acciones">
-
-                <button
-                onclick="abrirMenu(${index})">
-
-                    Continuar
-                    <i class="fa-solid fa-chevron-down"></i>
-
-                </button>
-
-                <div
-                class="menu"
-                id="menu${index}">
-
-                    <button
-                    onclick="editarHistoria(${index})">
-
-                        Editar historia
-                    </button>
-
-                    <button
-                    onclick="eliminarHistoria(${index})">
-
-                        Eliminar historia
-                    </button>
-
-                </div>
-
-            </div>
-
-        </div>
-
-        <!-- NUEVO BOTÓN SIGUE ESCRIBIENDO -->
-
-        <div class="seguir-escribiendo">
-
-            <button
-            class="btn-seguir"
-            onclick="mostrarCapitulos(${index})">
-
-                Sigue escribiendo
-                <i class="fa-solid fa-chevron-down"></i>
-
-            </button>
-
-            <div
-            class="menu-capitulos"
-            id="capitulos${index}">
-
-                <div
-                    class="lista-capitulos"
-                    id="listaCapitulos${index}">
-                </div>
-
-                <button
-                    class="btn-nueva-parte"
-                    onclick="crearCapitulo(${index})">
-
-                        <i class="fa-solid fa-plus"></i>
-
-                        Parte Nueva
-
-                </button>
-            </div>
-        </div>`;
-
-        lista.appendChild(card);
-    });
+if (!usuarioSesion) {
+    lista.innerHTML = `<p style="color:red; padding:20px;">
+        Debes iniciar sesión para ver tus historias.
+    </p>`;
+} else {
+    mostrarHistorias();
 }
 
-function abrirMenu(index){
+document.getElementById("crearHistoria")
+    .addEventListener("click", async () => {
 
-    const menu =
-    document.getElementById(
-    `menu${index}`);
+        if (!usuarioSesion) {
+            alert("Debes iniciar sesión primero.");
+            return;
+        }
 
+        try {
+            const res = await fetch(`${API}/historias`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    usuario_id: usuarioSesion.id,
+                    titulo: "Nueva Historia",
+                    descripcion: "",
+                    portada: "./imagenes/Asa-mitaka.jpg"
+                })
+            });
+
+            const data = await res.json();
+
+            if (data.success) {
+                // Guardar qué historia y capítulo editar
+                localStorage.setItem("HistoriaEditando", data.historia_id);
+                localStorage.setItem("CapituloEditando", 0);
+                location.href = "Escritura.html";
+            } else {
+                alert("Error al crear historia: " + (data.error || "desconocido"));
+            }
+
+        } catch (err) {
+            console.error("Error al crear historia:", err);
+            alert("No se pudo conectar con el servidor.");
+        }
+    });
+
+// ─────────────────────────────────────────────
+// MOSTRAR HISTORIAS
+// ─────────────────────────────────────────────
+
+async function mostrarHistorias() {
+
+    lista.innerHTML = `<p style="padding:20px;">Cargando historias...</p>`;
+
+    try {
+        const res = await fetch(`${API}/historias/${usuarioSesion.id}`);
+        const historias = await res.json();
+
+        lista.innerHTML = "";
+
+        if (!historias.length) {
+            lista.innerHTML = `<p style="padding:20px;">
+                No tienes historias aún. ¡Crea una nueva!
+            </p>`;
+            return;
+        }
+
+        historias.forEach((historia) => {
+            const card = document.createElement("div");
+            card.classList.add("card-historia");
+
+            const fecha = historia.fecha_creacion
+                ? new Date(historia.fecha_creacion).toLocaleDateString()
+                : "Sin fecha";
+
+            card.innerHTML = `
+                <img src="${historia.portada || './imagenes/Asa-mitaka.jpg'}"
+                    class="portada"
+                    onerror="this.src='./imagenes/Asa-mitaka.jpg'">
+
+                <div class="info">
+                    <h2>${historia.titulo}</h2>
+                    <p class="fecha">Última edición: ${fecha}</p>
+
+                    <div class="acciones">
+                        <button onclick="abrirMenu(${historia.id})">
+                            Continuar
+                            <i class="fa-solid fa-chevron-down"></i>
+                        </button>
+
+                        <div class="menu" id="menu${historia.id}">
+                            <button onclick="editarHistoria(${historia.id})">
+                                Editar historia
+                            </button>
+                            <button onclick="eliminarHistoria(${historia.id})">
+                                Eliminar historia
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SIGUE ESCRIBIENDO -->
+                <div class="seguir-escribiendo">
+                    <button class="btn-seguir"
+                            onclick="mostrarCapitulos(${historia.id})">
+                        Sigue escribiendo
+                        <i class="fa-solid fa-chevron-down"></i>
+                    </button>
+
+                    <div class="menu-capitulos"
+                        id="capitulos${historia.id}">
+
+                        <div class="lista-capitulos"
+                            id="listaCapitulos${historia.id}">
+                        </div>
+
+                        <button class="btn-nueva-parte"
+                                onclick="crearCapitulo(${historia.id})">
+                            <i class="fa-solid fa-plus"></i>
+                            Parte Nueva
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            lista.appendChild(card);
+        });
+
+    } catch (err) {
+        console.error("Error al cargar historias:", err);
+        lista.innerHTML = `<p style="color:red; padding:20px;">
+            Error al cargar historias. Verifica tu conexión.
+        </p>`;
+    }
+}
+
+// ─────────────────────────────────────────────
+// MENÚ PRINCIPAL DE LA CARD
+// ─────────────────────────────────────────────
+
+function abrirMenu(historiaId) {
+    const menu = document.getElementById(`menu${historiaId}`);
     menu.style.display =
-    menu.style.display === "block"
-    ? "none"
-    : "block";
+        menu.style.display === "block" ? "none" : "block";
 }
 
-function editarHistoria(index){
+// ─────────────────────────────────────────────
+// EDITAR HISTORIA
+// ─────────────────────────────────────────────
 
-    localStorage.setItem(
-    "HistoriaEditando",
-    index);
-
-    location.href =
-    "Escritura.html";
+function editarHistoria(historiaId) {
+    localStorage.setItem("HistoriaEditando", historiaId);
+    localStorage.setItem("CapituloEditando", 0);
+    location.href = "Escritura.html";
 }
 
-function eliminarHistoria(index){
+// ─────────────────────────────────────────────
+// ELIMINAR HISTORIA
+// ─────────────────────────────────────────────
 
-    if(
-    confirm(
-    "¿Eliminar esta historia?"
-    )
-    ){
+async function eliminarHistoria(historiaId) {
 
-        historias.splice(index,1);
+    if (!confirm("¿Eliminar esta historia y todos sus capítulos?")) return;
 
-        localStorage.setItem(
-        "historiasREADZONE",
-        JSON.stringify(historias)
-        );
+    try {
+        const res = await fetch(`${API}/historias/${historiaId}`, {
+            method: "DELETE"
+        });
 
-        mostrarHistorias();
+        const data = await res.json();
 
+        if (data.success) {
+            mostrarHistorias();
+        } else {
+            alert("Error al eliminar: " + (data.error || "desconocido"));
+        }
+
+    } catch (err) {
+        console.error("Error al eliminar historia:", err);
+        alert("No se pudo conectar con el servidor.");
     }
 }
 
-// Crear Capitulos Nuevos
-function crearCapitulo(index){
+// ─────────────────────────────────────────────
+// MENÚ DE CAPÍTULOS
+// ─────────────────────────────────────────────
 
-    let historias =
+function mostrarCapitulos(historiaId) {
+    const menu = document.getElementById(`capitulos${historiaId}`);
 
-    JSON.parse(
-    localStorage.getItem(
-    "historiasREADZONE"
-    )
-    ) || [];
-
-    if(
-    !historias[index]
-    .capitulos
-    ){
-
-        historias[index]
-        .capitulos = [];
-    }
-
-    historias[index]
-    .capitulos.push({
-
-        titulo:
-        "Parte " +
-        (
-        historias[index]
-        .capitulos.length + 1
-        ),
-
-        contenido:"",
-
-        ultimaEdicion:
-        new Date()
-        .toLocaleString()
-
-    });
-
-    localStorage.setItem(
-
-        "historiasREADZONE",
-
-        JSON.stringify(
-        historias
-        )
-
-    );
-
-    cargarCapitulos(index);
-}
-
-// Mostrar menu
-function mostrarCapitulos(index){
-
-    const menu =
-    document.getElementById(
-    `capitulos${index}`
-    );
-
-    if(
-    menu.style.display ===
-    "block"
-    ){
-
-        menu.style.display =
-        "none";
-
+    if (menu.style.display === "block") {
+        menu.style.display = "none";
         return;
     }
 
-    menu.style.display =
-    "block";
-
-    cargarCapitulos(index);
+    menu.style.display = "block";
+    cargarCapitulos(historiaId);
 }
 
-function cargarCapitulos(index){
+// ─────────────────────────────────────────────
+// CARGAR CAPÍTULOS DESDE EL SERVIDOR
+// ─────────────────────────────────────────────
 
-    let historias =
+async function cargarCapitulos(historiaId) {
 
-    JSON.parse(
-    localStorage.getItem(
-    "historiasREADZONE"
-    )
-    ) || [];
+    const listaEl = document.getElementById(`listaCapitulos${historiaId}`);
+    listaEl.innerHTML = `<p style="padding:8px;font-size:13px;">Cargando...</p>`;
 
-    const lista =
+    try {
+        const res = await fetch(`${API}/capitulos/${historiaId}`);
+        const capitulos = await res.json();
 
-    document.getElementById(
-    `listaCapitulos${index}`
-    );
+        listaEl.innerHTML = "";
 
-    lista.innerHTML = "";
+        if (!capitulos.length) {
+            listaEl.innerHTML = `<p style="padding:8px;font-size:13px;">
+                Sin capítulos aún.
+            </p>`;
+            return;
+        }
 
-    const capitulos =
+        capitulos.forEach((cap) => {
+            const fecha = cap.fecha_creacion
+                ? new Date(cap.fecha_creacion).toLocaleString()
+                : "";
 
-    historias[index]
-    .capitulos || [];
+            listaEl.innerHTML += `
+                <div class="capitulo-item"
+                    onclick="abrirCapitulo(${historiaId}, ${cap.id})">
+                    <strong>${cap.titulo || "Sin título"}</strong>
+                    <br>
+                    <small>${fecha}</small>
+                </div>
+            `;
+        });
 
-    capitulos.forEach(
-    (capitulo,pos)=>{
-
-        lista.innerHTML +=
-
-        `
-        <div
-        class="capitulo-item"
-
-        onclick="
-        abrirCapitulo(
-        ${index},
-        ${pos}
-        )">
-
-            <strong>
-
-            ${capitulo.titulo}
-
-            </strong>
-
-            <br>
-
-            <small>
-
-            ${capitulo.ultimaEdicion}
-
-            </small>
-
-        </div>
-        `;
-    });
+    } catch (err) {
+        console.error("Error al cargar capítulos:", err);
+        listaEl.innerHTML = `<p style="color:red;font-size:13px;padding:8px;">
+            Error al cargar capítulos.
+        </p>`;
+    }
 }
 
-// Abrir capotulo en especifico
-function abrirCapitulo(
-historiaIndex,
-capituloIndex
-){
+// ─────────────────────────────────────────────
+// CREAR CAPÍTULO NUEVO
+// ─────────────────────────────────────────────
 
-    localStorage.setItem(
-    "HistoriaEditando",
-    historiaIndex
-    );
+async function crearCapitulo(historiaId) {
 
-    localStorage.setItem(
-    "CapituloEditando",
-    capituloIndex
-    );
+    try {
+        // Primero contar cuántos capítulos hay para el número
+        const res = await fetch(`${API}/capitulos/${historiaId}`);
+        const capitulos = await res.json();
 
-    location.href =
-    "Escritura.html";
+        const numero = capitulos.length + 1;
+        const titulo = numero === 1 ? "Prólogo" : `Parte ${numero}`;
+
+        const resCreate = await fetch(`${API}/capitulos`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                historia_id: historiaId,
+                titulo: titulo,
+                contenido: "",
+                numero_capitulo: numero
+            })
+        });
+
+        const data = await resCreate.json();
+
+        if (data.success) {
+            // Abrir directamente el nuevo capítulo en el editor
+            localStorage.setItem("HistoriaEditando", historiaId);
+            localStorage.setItem("CapituloEditando", data.capitulo_id);
+            location.href = "Escritura.html";
+        } else {
+            alert("Error al crear capítulo: " + (data.error || "desconocido"));
+        }
+
+    } catch (err) {
+        console.error("Error al crear capítulo:", err);
+        alert("No se pudo conectar con el servidor.");
+    }
+}
+
+// ─────────────────────────────────────────────
+// ABRIR CAPÍTULO EN EL EDITOR
+// ─────────────────────────────────────────────
+
+function abrirCapitulo(historiaId, capituloId) {
+    localStorage.setItem("HistoriaEditando", historiaId);
+    localStorage.setItem("CapituloEditando", capituloId);
+    location.href = "Escritura.html";
 }

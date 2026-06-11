@@ -386,6 +386,474 @@ console.log(
 );
 
 // ─────────────────────────────────────────────
+// CREAR HISTORIA (desde Modificar_historias)
+// ─────────────────────────────────────────────
+
+app.post("/historias", async (req, res) => {
+    try {
+        const { usuario_id, titulo, descripcion, portada } = req.body;
+
+        const [result] = await pool.query(
+            `INSERT INTO historias (usuario_id, titulo, descripcion, portada)
+            VALUES (?, ?, ?, ?)`,
+            [usuario_id, titulo || "Nueva Historia", descripcion || "", portada || ""]
+        );
+
+        const historiaId = result.insertId;
+
+        // Crear el primer capítulo automáticamente (Prólogo)
+        await pool.query(
+            `INSERT INTO capitulos (historia_id, titulo, contenido, numero_capitulo)
+            VALUES (?, ?, ?, ?)`,
+            [historiaId, "Prólogo", "", 1]
+        );
+
+        res.json({ success: true, historia_id: historiaId });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// ─────────────────────────────────────────────
+// ELIMINAR HISTORIA (y sus capítulos)
+// ─────────────────────────────────────────────
+
+app.delete("/historias/:id", async (req, res) => {
+    try {
+        const id = req.params.id;
+
+        await pool.query(`DELETE FROM capitulos WHERE historia_id = ?`, [id]);
+        await pool.query(`DELETE FROM historias WHERE id = ?`, [id]);
+
+        res.json({ success: true });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// ─────────────────────────────────────────────
+// CAPÍTULOS DE UNA HISTORIA
+// ─────────────────────────────────────────────
+
+app.get("/capitulos/:historiaId", async (req, res) => {
+    try {
+        const [capitulos] = await pool.query(
+            `SELECT * FROM capitulos
+            WHERE historia_id = ?
+            ORDER BY numero_capitulo ASC`,
+            [req.params.historiaId]
+        );
+
+        res.json(capitulos);
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Error al obtener capítulos" });
+    }
+});
+
+// ─────────────────────────────────────────────
+// CREAR CAPÍTULO NUEVO
+// ─────────────────────────────────────────────
+
+app.post("/capitulos", async (req, res) => {
+    try {
+        const { historia_id, titulo, contenido, numero_capitulo } = req.body;
+
+        const [result] = await pool.query(
+            `INSERT INTO capitulos (historia_id, titulo, contenido, numero_capitulo)
+            VALUES (?, ?, ?, ?)`,
+            [historia_id, titulo, contenido || "", numero_capitulo]
+        );
+
+        res.json({ success: true, capitulo_id: result.insertId });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// POST /historias — Crear historia completa desde el formulario
+app.post("/historias", async (req, res) => {
+    try {
+        const {
+            usuario_id,
+            titulo,
+            descripcion,
+            portada,
+            idioma,
+            categoria,
+            derechos,
+            audiencia,
+            etiquetas,
+            contenido_adulto
+        } = req.body;
+
+        if (!usuario_id || !titulo) {
+            return res.json({ success: false, error: "Faltan datos obligatorios" });
+        }
+
+        const [result] = await pool.query(
+            `INSERT INTO historias
+                (usuario_id, titulo, descripcion, portada,
+                idioma, categoria, derechos, audiencia,
+                etiquetas, contenido_adulto)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+                usuario_id,
+                titulo,
+                descripcion  || "",
+                portada      || "",
+                idioma       || "Español",
+                categoria    || "",
+                derechos     || "",
+                audiencia    || "",
+                etiquetas    || "",
+                contenido_adulto ? 1 : 0
+            ]
+        );
+
+        const historiaId = result.insertId;
+
+        // Crear el prólogo automáticamente
+        const [capResult] = await pool.query(
+            `INSERT INTO capitulos (historia_id, titulo, contenido, numero_capitulo)
+            VALUES (?, ?, ?, ?)`,
+            [historiaId, "Prólogo", "", 1]
+        );
+
+        res.json({
+            success:     true,
+            historia_id: historiaId,
+            capitulo_id: capResult.insertId   // ← necesario para Escritura.html
+        });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// ─────────────────────────────────────────────
+// OBTENER UNA HISTORIA POR ID (para el editor)
+// ─────────────────────────────────────────────
+
+app.get("/historia/:id", async (req, res) => {
+    try {
+        const [filas] = await pool.query(
+            `SELECT * FROM historias WHERE id = ?`,
+            [req.params.id]
+        );
+
+        if (filas.length === 0) {
+            return res.status(404).json({ error: "Historia no encontrada" });
+        }
+
+        res.json(filas[0]);
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Error al obtener la historia" });
+    }
+});
+
+// ─────────────────────────────────────────────
+// OBTENER UN CAPÍTULO POR ID
+// ─────────────────────────────────────────────
+
+app.get("/capitulo/:id", async (req, res) => {
+    try {
+        const [filas] = await pool.query(
+            `SELECT * FROM capitulos WHERE id = ?`,
+            [req.params.id]
+        );
+
+        if (filas.length === 0) {
+            return res.status(404).json({ error: "Capítulo no encontrado" });
+        }
+
+        res.json(filas[0]);
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Error al obtener el capítulo" });
+    }
+});
+
+// ─────────────────────────────────────────────
+// GUARDAR/ACTUALIZAR CAPÍTULO
+// ─────────────────────────────────────────────
+
+app.put("/capitulo/:id", async (req, res) => {
+    try {
+        const { titulo, contenido } = req.body;
+
+        await pool.query(
+            `UPDATE capitulos
+            SET titulo = ?, contenido = ?, fecha_creacion = NOW()
+            WHERE id = ?`,
+            [titulo, contenido, req.params.id]
+        );
+
+        res.json({ success: true });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// ─────────────────────────────────────────────
+// PUBLICAR HISTORIA
+// ─────────────────────────────────────────────
+
+app.put("/historia/:id/publicar", async (req, res) => {
+    try {
+        await pool.query(
+            `UPDATE historias SET completa = TRUE WHERE id = ?`,
+            [req.params.id]
+        );
+
+        res.json({ success: true });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// ─────────────────────────────────────────────
+// CONTAR VISTAS DE UNA HISTORIA
+// ─────────────────────────────────────────────
+
+app.get("/historia/:id/vistas", async (req, res) => {
+    try {
+        const [filas] = await pool.query(
+            `SELECT COUNT(*) AS total FROM vistas WHERE historia_id = ?`,
+            [req.params.id]
+        );
+
+        res.json({ total: filas[0].total });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ total: 0 });
+    }
+});
+
+// ─────────────────────────────────────────────
+// GUARDAR PROGRESO DE LECTURA
+// ─────────────────────────────────────────────
+
+app.post("/progreso", async (req, res) => {
+    try {
+        const { usuario_id, capitulo_id } = req.body;
+
+        // Evitar duplicados: si ya existe ese progreso, actualizarlo
+        const [existe] = await pool.query(
+            `SELECT id FROM progreso_lectura
+            WHERE usuario_id = ? AND capitulo_id = ?`,
+            [usuario_id, capitulo_id]
+        );
+
+        if (existe.length > 0) {
+            await pool.query(
+                `UPDATE progreso_lectura SET fecha = NOW()
+                WHERE usuario_id = ? AND capitulo_id = ?`,
+                [usuario_id, capitulo_id]
+            );
+        } else {
+            await pool.query(
+                `INSERT INTO progreso_lectura (usuario_id, capitulo_id)
+                VALUES (?, ?)`,
+                [usuario_id, capitulo_id]
+            );
+        }
+
+        res.json({ success: true });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// ─────────────────────────────────────────────
+// OBTENER BIBLIOTECA DEL USUARIO
+// ─────────────────────────────────────────────
+
+app.get("/biblioteca/:usuarioId", async (req, res) => {
+    try {
+        const [historias] = await pool.query(`
+            SELECT
+                h.id,
+                h.titulo,
+                h.portada,
+                h.descripcion,
+                u.nombre  AS nombre_autor,
+                COUNT(c.id) AS total_capitulos
+            FROM biblioteca b
+            INNER JOIN historias h ON b.historia_id = h.id
+            INNER JOIN usuarios  u ON h.usuario_id  = u.id
+            LEFT  JOIN capitulos c ON c.historia_id = h.id
+            WHERE b.usuario_id = ?
+            GROUP BY h.id, h.titulo, h.portada, h.descripcion, u.nombre
+            ORDER BY b.id DESC
+        `, [req.params.usuarioId]);
+
+        res.json(historias);
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Error al obtener biblioteca" });
+    }
+});
+
+// ─────────────────────────────────────────────
+// AGREGAR HISTORIA A LA BIBLIOTECA
+// ─────────────────────────────────────────────
+
+app.post("/biblioteca", async (req, res) => {
+    try {
+        const { usuario_id, historia_id } = req.body;
+
+        // Evitar duplicados
+        const [existe] = await pool.query(
+            `SELECT id FROM biblioteca
+            WHERE usuario_id = ? AND historia_id = ?`,
+            [usuario_id, historia_id]
+        );
+
+        if (existe.length > 0) {
+            return res.json({ success: true, yaExiste: true });
+        }
+
+        await pool.query(
+            `INSERT INTO biblioteca (usuario_id, historia_id)
+            VALUES (?, ?)`,
+            [usuario_id, historia_id]
+        );
+
+        res.json({ success: true, yaExiste: false });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// ─────────────────────────────────────────────
+// QUITAR HISTORIA DE LA BIBLIOTECA
+// ─────────────────────────────────────────────
+
+app.delete("/biblioteca/:usuarioId/:historiaId", async (req, res) => {
+    try {
+        await pool.query(
+            `DELETE FROM biblioteca
+            WHERE usuario_id = ? AND historia_id = ?`,
+            [req.params.usuarioId, req.params.historiaId]
+        );
+
+        res.json({ success: true });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// ─────────────────────────────────────────────
+// ACTUALIZAR DETALLES DE UNA HISTORIA
+// ─────────────────────────────────────────────
+
+app.put("/historia/:id", async (req, res) => {
+    try {
+        const {
+            titulo, descripcion, portada,
+            idioma, categoria, derechos,
+            audiencia, etiquetas,
+            contenido_adulto, completa
+        } = req.body;
+
+        await pool.query(
+            `UPDATE historias
+             SET titulo           = ?,
+                 descripcion      = ?,
+                 portada          = ?,
+                 idioma           = ?,
+                 categoria        = ?,
+                 derechos         = ?,
+                 audiencia        = ?,
+                 etiquetas        = ?,
+                 contenido_adulto = ?,
+                 completa         = ?
+             WHERE id = ?`,
+            [
+                titulo, descripcion, portada || "",
+                idioma, categoria, derechos,
+                audiencia, etiquetas,
+                contenido_adulto ? 1 : 0,
+                completa         ? 1 : 0,
+                req.params.id
+            ]
+        );
+
+        res.json({ success: true });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// ─────────────────────────────────────────────
+// ELIMINAR CAPÍTULO
+// ─────────────────────────────────────────────
+
+app.delete("/capitulo/:id", async (req, res) => {
+    try {
+        await pool.query(
+            `DELETE FROM capitulos WHERE id = ?`,
+            [req.params.id]
+        );
+
+        res.json({ success: true });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// ─────────────────────────────────────────────
+// REORDENAR CAPÍTULOS (drag and drop)
+// ─────────────────────────────────────────────
+
+app.put("/capitulos/reordenar", async (req, res) => {
+    try {
+        const { orden } = req.body; // [{ id, numero_capitulo }, ...]
+
+        for (const item of orden) {
+            await pool.query(
+                `UPDATE capitulos SET numero_capitulo = ? WHERE id = ?`,
+                [item.numero_capitulo, item.id]
+            );
+        }
+
+        res.json({ success: true });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// ─────────────────────────────────────────────
 // INICIAR SERVIDOR
 // ─────────────────────────────────────────────
 

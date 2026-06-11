@@ -1,166 +1,238 @@
-const historiaID =
-localStorage.getItem(
-"historiaSeleccionada"
-);
+// ─────────────────────────────────────────────
+// ID DE LA HISTORIA (guardado al hacer clic en una card)
+// ─────────────────────────────────────────────
 
-const historias =
-JSON.parse(
-localStorage.getItem(
-"historiasREADZONE"
-)
-) || [];
+const historiaID = localStorage.getItem("historiaSeleccionada");
 
-const historia =
-historias[historiaID];
+// ─────────────────────────────────────────────
+// ARRANQUE
+// ─────────────────────────────────────────────
 
-document.getElementById(
-"tituloHistoria"
-).textContent =
-historia.titulo;
+window.addEventListener("DOMContentLoaded", async () => {
 
-document.getElementById(
-"autorHistoria"
-).textContent =
-historia.autor;
+    if (!historiaID) {
+        document.querySelector(".contenedor").innerHTML =
+            `<p style="padding:40px;color:red;">
+                No se encontró la historia. Vuelve al inicio.
+            </p>`;
+        return;
+    }
 
-document.getElementById(
-"descripcionHistoria"
-).textContent =
-historia.descripcion;
+    await cargarHistoria();
+    await cargarCapitulos();
+    await registrarVista();
+    iniciarTabs();
+});
 
-document.getElementById(
-"vistas"
-).textContent =
-historia.vistas || 0;
+// ─────────────────────────────────────────────
+// CARGAR DATOS DE LA HISTORIA
+// ─────────────────────────────────────────────
 
-document.getElementById(
-"votos"
-).textContent =
-historia.votos || 0;
+async function cargarHistoria() {
+    try {
+        const res      = await fetch(`/historia/${historiaID}`);
+        const historia = await res.json();
 
-document.getElementById(
-"cantidadCapitulos"
-).textContent =
-historia.capitulos.length;
+        if (historia.error) {
+            alert("Historia no encontrada.");
+            location.href = "index.html";
+            return;
+        }
 
-document.getElementById(
-"portadaHistoria"
-).src =
-historia.portada;
+        // Portada
+        if (historia.portada) {
+            document.getElementById("portadaHistoria").src = historia.portada;
+        }
 
-const lista =
-document.getElementById(
-"listaCapitulos"
-);
+        // Título y descripción
+        document.getElementById("tituloHistoria").textContent =
+            historia.titulo || "Sin título";
 
-historia.capitulos.forEach(
-(capitulo,index)=>{
+        document.getElementById("descripcionHistoria").textContent =
+            historia.descripcion || "Sin descripción.";
 
-    const div =
-    document.createElement(
-    "div"
-    );
+        // Etiquetas
+        if (historia.etiquetas) {
+            document.getElementById("etiquetasHistoria").textContent =
+                historia.etiquetas;
+        }
 
-    div.className =
-    "capitulo";
+        // Badges
+        if (historia.contenido_adulto) {
+            document.getElementById("badgeAdulto").style.display = "inline";
+        }
+        if (historia.completa) {
+            document.getElementById("badgeCompleta").style.display = "inline";
+        }
 
-    div.innerHTML =
-    `<strong>
-    ${capitulo.titulo}
-    </strong>`;
+        // Autor — cargar datos del usuario
+        if (historia.usuario_id) {
+            cargarAutor(historia.usuario_id);
+        }
 
-    div.onclick = ()=>{
+        // Vistas
+        const resVistas = await fetch(`/historia/${historiaID}/vistas`);
+        const dataVistas = await resVistas.json();
+        document.getElementById("vistas").textContent = dataVistas.total || 0;
 
-        localStorage.setItem(
-        "historiaLectura",
-        historiaID
-        );
-
-        localStorage.setItem(
-        "capituloInicial",
-        index
-        );
-
-        location.href =
-        "Leer_capitulo.html";
-    };
-
-    lista.appendChild(div);
-
+    } catch (err) {
+        console.error("Error al cargar historia:", err);
+    }
 }
-);
 
-document.getElementById(
-"btnLeer"
-).onclick = ()=>{
+// ─────────────────────────────────────────────
+// CARGAR DATOS DEL AUTOR
+// ─────────────────────────────────────────────
 
-    localStorage.setItem(
-    "historiaLectura",
-    historiaID
-    );
+async function cargarAutor(usuarioId) {
+    try {
+        const res    = await fetch(`/usuario/${usuarioId}`);
+        const autor  = await res.json();
 
-    location.href =
-    "Leer_capitulo.html";
+        document.getElementById("autorHistoria").textContent =
+            autor.nombre || autor.usuario || "Autor desconocido";
+
+        if (autor.foto_perfil) {
+            document.getElementById("fotoAutor").src = autor.foto_perfil;
+        }
+
+    } catch (err) {
+        console.error("Error al cargar autor:", err);
+        document.getElementById("autorHistoria").textContent = "Autor desconocido";
+    }
+}
+
+// ─────────────────────────────────────────────
+// CARGAR CAPÍTULOS
+// ─────────────────────────────────────────────
+
+async function cargarCapitulos() {
+    const lista = document.getElementById("listaCapitulos");
+
+    try {
+        const res       = await fetch(`/capitulos/${historiaID}`);
+        const capitulos = await res.json();
+
+        document.getElementById("cantidadCapitulos").textContent =
+            capitulos.length;
+
+        lista.innerHTML = "";
+
+        if (!capitulos.length) {
+            lista.innerHTML = `<p style="padding:16px;">Esta historia no tiene capítulos aún.</p>`;
+            return;
+        }
+
+        capitulos.forEach((capitulo, index) => {
+
+            const div = document.createElement("div");
+            div.className = "capitulo";
+
+            const fecha = capitulo.fecha_creacion
+                ? new Date(capitulo.fecha_creacion).toLocaleDateString()
+                : "";
+
+            div.innerHTML = `
+                <div class="capitulo-info">
+                    <strong>${capitulo.titulo || "Sin título"}</strong>
+                    <small>${fecha}</small>
+                </div>
+                <i class="fa-solid fa-chevron-right"></i>
+            `;
+
+            div.onclick = () => {
+                localStorage.setItem("historiaLectura",  historiaID);
+                localStorage.setItem("capituloLectura",  capitulo.id);
+                localStorage.setItem("capituloInicial",  index);
+                location.href = "Leer_capitulo.html";
+            };
+
+            lista.appendChild(div);
+        });
+
+    } catch (err) {
+        console.error("Error al cargar capítulos:", err);
+        lista.innerHTML = `<p style="color:red;padding:16px;">Error al cargar capítulos.</p>`;
+    }
+}
+
+// ─────────────────────────────────────────────
+// BOTÓN COMENZAR LECTURA (abre el primer capítulo)
+// ─────────────────────────────────────────────
+
+document.getElementById("btnLeer").onclick = async () => {
+
+    try {
+        const res       = await fetch(`/capitulos/${historiaID}`);
+        const capitulos = await res.json();
+
+        if (!capitulos.length) {
+            alert("Esta historia no tiene capítulos todavía.");
+            return;
+        }
+
+        localStorage.setItem("historiaLectura", historiaID);
+        localStorage.setItem("capituloLectura", capitulos[0].id);
+        localStorage.setItem("capituloInicial", 0);
+        location.href = "Leer_capitulo.html";
+
+    } catch (err) {
+        console.error("Error al iniciar lectura:", err);
+        alert("No se pudo conectar con el servidor.");
+    }
 };
 
-/* ========================= */
-/* CAMBIO DE PESTAÑAS */
-/* ========================= */
+// ─────────────────────────────────────────────
+// REGISTRAR VISTA
+// ─────────────────────────────────────────────
 
-const botonesTabs =
-document.querySelectorAll(
-".tab-btn"
-);
-
-const resumen =
-document.getElementById(
-"tabResumen"
-);
-
-const capitulos =
-document.getElementById(
-"tabCapitulos"
-);
-
-botonesTabs.forEach(btn=>{
-
-    btn.addEventListener(
-    "click",
-    ()=>{
-
-        botonesTabs.forEach(
-        b=>b.classList.remove(
-        "activo"
-        )
+async function registrarVista() {
+    try {
+        const usuarioSesion = JSON.parse(
+            sessionStorage.getItem("usuarioREADZONE") ||
+            localStorage.getItem("usuarioREADZONE") ||
+            "null"
         );
 
-        btn.classList.add(
-        "activo"
-        );
+        await fetch("/vista", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                usuario_id:  usuarioSesion?.id || null,
+                historia_id: historiaID
+            })
+        });
 
-        resumen.classList.remove(
-        "activo"
-        );
-
-        capitulos.classList.remove(
-        "activo"
-        );
-
-        if(
-        btn.dataset.tab ===
-        "resumen"
-        ){
-            resumen.classList.add(
-            "activo"
-            );
-        }
-        else{
-            capitulos.classList.add(
-            "activo"
-            );
-        }
-
+    } catch (err) {
+        // Silencioso — no interrumpir la experiencia si falla
+        console.error("Error al registrar vista:", err);
     }
-    );
+}
 
-});
+// ─────────────────────────────────────────────
+// CAMBIO DE PESTAÑAS
+// ─────────────────────────────────────────────
+
+function iniciarTabs() {
+
+    const botonesTabs = document.querySelectorAll(".tab-btn");
+    const tabResumen  = document.getElementById("tabResumen");
+    const tabCapitulos = document.getElementById("tabCapitulos");
+
+    botonesTabs.forEach(btn => {
+        btn.addEventListener("click", () => {
+
+            botonesTabs.forEach(b => b.classList.remove("activo"));
+            btn.classList.add("activo");
+
+            tabResumen.classList.remove("activo");
+            tabCapitulos.classList.remove("activo");
+
+            if (btn.dataset.tab === "resumen") {
+                tabResumen.classList.add("activo");
+            } else {
+                tabCapitulos.classList.add("activo");
+            }
+        });
+    });
+}

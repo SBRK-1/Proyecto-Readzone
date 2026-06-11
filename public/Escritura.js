@@ -1,749 +1,326 @@
-/* ==========================
-ELEMENTOS
-========================== */
+// ─────────────────────────────────────────────
+// IDs guardados por Historias.js / Modificar_historias.js
+// ─────────────────────────────────────────────
 
-const titulo =
-document.getElementById(
-"tituloCapitulo"
-);
+const historiaId  = localStorage.getItem("HistoriaEditando");
+const capituloId  = localStorage.getItem("CapituloEditando");
 
-const contenido =
-document.getElementById(
-"contenidoCapitulo"
-);
+// ─────────────────────────────────────────────
+// ELEMENTOS
+// ─────────────────────────────────────────────
 
-const estado =
-document.getElementById(
-"estadoGuardado"
-);
+const tituloInput           = document.getElementById("tituloCapitulo");
+const editor                = document.getElementById("contenidoCapitulo");
+const estadoEl              = document.getElementById("estadoGuardado");
+const toastEl               = document.getElementById("toastGuardado");
+const contadorPalabras      = document.getElementById("contadorPalabras");
+const contadorCaracteres    = document.getElementById("contadorCaracteres");
+const nombreHistoriaEl      = document.getElementById("nombreHistoria");
+const descripcionMiniEl     = document.getElementById("descripcionHistoriaMini");
+const portadaEl             = document.getElementById("portadaHistoria");
+const ultimaEdicionEl       = document.getElementById("ultimaEdicion");
+const btnGuardar            = document.getElementById("btnGuardar");
+const btnVistaPrevia        = document.getElementById("btnVistaPrevia");
+const btnPublicar           = document.getElementById("btnPublicar");
+const btnVolver             = document.getElementById("btnVolver");
 
-const toast =
-document.getElementById(
-"toastGuardado"
-);
+// ─────────────────────────────────────────────
+// ARRANQUE
+// ─────────────────────────────────────────────
 
-const contadorPalabras =
-document.getElementById(
-"contadorPalabras"
-);
+window.addEventListener("DOMContentLoaded", async () => {
 
-const contadorCaracteres =
-document.getElementById(
-"contadorCaracteres"
-);
+    if (!historiaId || !capituloId) {
+        alert("No hay historia o capítulo seleccionado.");
+        location.href = "Modificar_historias.html";
+        return;
+    }
 
-const nombreHistoria =
-document.getElementById(
-"nombreHistoria"
-);
-
-const descripcionHistoriaMini =
-document.getElementById(
-"descripcionHistoriaMini"
-);
-
-const btnVolver =
-document.getElementById(
-"btnVolver"
-);
-
-const portadaHistoria =
-document.getElementById(
-"portadaHistoria"
-);
-
-const btnGuardar =
-document.getElementById(
-"btnGuardar"
-);
-
-const btnVistaPrevia =
-document.getElementById(
-"btnVistaPrevia"
-);
-
-const btnPublicar =
-document.getElementById(
-"btnPublicar"
-);
-
-const editor =
-document.getElementById(
-"contenidoCapitulo"
-);
-
-const insertarImagen =
-document.getElementById(
-"insertarImagen"
-);
-
-/* ==========================
-VARIABLES
-========================== */
-
-let imagenGuardada = "";
-let videoGuardado = "";
-
-const idHistoria =
-localStorage.getItem(
-"historiaActualID"
-);
-
-/* ==========================
-CARGAR HISTORIA
-========================== */
-
-window.addEventListener(
-"DOMContentLoaded",
-()=>{
-
-let historias =
-JSON.parse(
-localStorage.getItem(
-"historiasREADZONE"
-)
-) || [];
-
-if(
-idHistoria === null ||
-!historias[idHistoria]
-){
-return;
-}
-
-const historia =
-historias[idHistoria];
-
-titulo.value =
-historia.titulo || "";
-
-contenido.innerHTML =
-historia.contenido || "";
-
-imagenGuardada =
-historia.imagen || "";
-
-videoGuardado =
-historia.video || "";
-
-nombreHistoria.textContent =
-historia.titulo ||
-"Nueva Historia";
-
-descripcionHistoriaMini.textContent =
-
-historia.descripcion ||
-
-"Sin descripción";
-
-if(
-historia.portada
-){
-
-portadaHistoria.src =
-historia.portada;
-
-}
-
-actualizarContador();
-
-actualizarFecha();
+    await cargarDatos();
 });
 
-/* ==========================
-CONTADORES
-========================== */
+// ─────────────────────────────────────────────
+// CARGAR HISTORIA Y CAPÍTULO DESDE EL SERVIDOR
+// ─────────────────────────────────────────────
 
-contenido.addEventListener(
-"input",
-actualizarContador
-);
+async function cargarDatos() {
+    try {
+        const resHistoria = await fetch(`/historia/${historiaId}`);
+        const historia    = await resHistoria.json();
 
-function actualizarContador(){
+        if (historia.error) {
+            alert("Historia no encontrada.");
+            location.href = "Modificar_historias.html";
+            return;
+        }
 
-const texto = contenido.innerText.trim();
+        nombreHistoriaEl.textContent  = historia.titulo      || "Nueva Historia";
+        descripcionMiniEl.textContent = historia.descripcion || "";
 
-const palabras = texto
-? texto.split(/\s+/)
-: [];
+        if (historia.portada) {
+            portadaEl.src = historia.portada;
+        }
 
-contadorPalabras.textContent =
-palabras.length +
-" palabras";
+        const resCapitulo = await fetch(`/capitulo/${capituloId}`);
+        const capitulo    = await resCapitulo.json();
 
-contadorCaracteres.textContent =
-contenido.innerText.length +
-" caracteres";
+        if (capitulo.error) {
+            alert("Capítulo no encontrado.");
+            location.href = "Modificar_historias.html";
+            return;
+        }
 
+        tituloInput.value  = capitulo.titulo   || "";
+        editor.innerHTML   = capitulo.contenido || "";
+
+        if (capitulo.fecha_creacion) {
+            ultimaEdicionEl.textContent =
+                "Última edición: " +
+                new Date(capitulo.fecha_creacion).toLocaleString();
+        }
+
+        actualizarContador();
+
+    } catch (err) {
+        console.error("Error al cargar datos:", err);
+        alert("No se pudo conectar con el servidor.");
+    }
 }
 
-/* ==========================
-CAMBIOS
-========================== */
+// ─────────────────────────────────────────────
+// CONTADORES
+// ─────────────────────────────────────────────
 
-insertarImagen.addEventListener(
-"click",
-()=>{
+editor.addEventListener("input", actualizarContador);
 
-document
-.getElementById(
-"inputImagen"
-)
-.click();
+function actualizarContador() {
+    const texto    = editor.innerText.trim();
+    const palabras = texto ? texto.split(/\s+/) : [];
 
+    contadorPalabras.textContent   = palabras.length + " palabras";
+    contadorCaracteres.textContent = editor.innerText.length + " caracteres";
+}
+
+// ─────────────────────────────────────────────
+// MARCAR SIN GUARDAR
+// ─────────────────────────────────────────────
+
+tituloInput.addEventListener("input", () => {
+    nombreHistoriaEl.textContent = tituloInput.value || "Nueva Historia";
+    marcarSinGuardar();
 });
 
-titulo.addEventListener(
-"input",
-marcarSinGuardar
-);
+editor.addEventListener("input", marcarSinGuardar);
 
-titulo.addEventListener(
-"input",
-()=>{
-nombreHistoria.textContent =
-titulo.value ||
-"Nueva Historia";
-}
-);
-
-contenido.addEventListener(
-"input",
-marcarSinGuardar
-);
-
-document.getElementById(
-"inputImagen"
-).addEventListener(
-"change",
-marcarSinGuardar
-);
-
-document.getElementById(
-"inputVideo"
-).addEventListener(
-"change",
-marcarSinGuardar
-);
-
-function marcarSinGuardar(){
-
-estado.classList.remove(
-"guardado"
-);
-
-estado.innerHTML =
-
-`
-<i class="fa-solid
-fa-cloud"></i>
-
-Sin guardar
-`;
-
+function marcarSinGuardar() {
+    estadoEl.classList.remove("guardado");
+    estadoEl.innerHTML = `<i class="fa-solid fa-cloud"></i> Sin guardar`;
 }
 
-/* ==========================
-IMAGEN
-========================== */
-
-document
-.getElementById(
-"inputImagen"
-)
-.addEventListener(
-"change",
-function(){
-
-const archivo =
-this.files[0];
-
-if(!archivo) return;
-
-const lector =
-new FileReader();
-
-lector.onload =
-(e)=>{
-
-const url =
-e.target.result;
-
-editor.focus();
-
-document.execCommand(
-
-"insertHTML",
-
-false,
-
-`
-<div class="bloque-media">
-
-<button class="btn-eliminar-media">
-✖
-</button>
-
-<img
-src="${url}"
-class="imagen-capitulo">
-
-</div>
-`
-
-);
-
-editor.innerHTML += "<p><br></p>";
-
-editor.focus();
-
-};
-
-lector.readAsDataURL(
-archivo
-);
-
-this.value = "";
-
-});
-
-/* ==========================
-VIDEO
-========================== */
-
-document
-.getElementById(
-"inputVideo"
-)
-.addEventListener(
-"change",
-function(){
-
-const archivo =
-this.files[0];
-
-if(!archivo) return;
-
-const lector =
-new FileReader();
-
-lector.onload =
-(e)=>{
-
-const url =
-e.target.result;
-
-editor.focus();
-
-document.execCommand(
-
-"insertHTML",
-
-false,
-
-`
-<div class="bloque-media">
-
-<button class="btn-eliminar-media">
-✖
-</button>
-
-<video
-controls
-src="${url}">
-
-</video>
-
-</div>
-`
-
-);
-
-editor.innerHTML += "<p><br></p>";
-
-editor.focus();
-
-};
-
-lector.readAsDataURL(
-archivo
-);
-
-this.value = "";
-
-});
-
-/* ==========================
-GUARDAR
-========================== */
-
-btnGuardar.addEventListener(
-"click",
-guardarHistoria
-);
-
-function guardarHistoria(){
-
-estado.innerHTML =
-
-`
-<i class="fa-solid
-fa-circle-notch
-girando"></i>
-
-Guardando...
-`;
-
-let historias =
-
-JSON.parse(
-localStorage.getItem(
-"historiasREADZONE"
-)
-) || [];
-
-if(
-!historias[idHistoria]
-){
-
-alert(
-"No hay una historia seleccionada"
-);
-
-return;
-}
-
-historias[idHistoria] = {
-
-...historias[idHistoria],
-
-titulo:
-titulo.value,
-
-contenido:
-contenido.innerHTML,
-
-portada:
-imagenGuardada ||
-historias[idHistoria]
-?.portada,
-
-imagen:
-imagenGuardada,
-
-video:
-videoGuardado,
-
-ultimaEdicion:
-new Date()
-.toLocaleString()
-
-};
-
-localStorage.setItem(
-
-"historiasREADZONE",
-
-JSON.stringify(
-historias
-)
-
-);
-
-nombreHistoria
-.textContent =
-
-titulo.value ||
-"Nueva Historia";
-
-estado.innerHTML =
-
-`
-<i class="fa-solid
-fa-check"></i>
-
-Guardado correctamente
-`;
-
-estado.classList.add(
-"guardado"
-);
-
-mostrarToast();
-
-actualizarFecha();
-
-}
-
-/* ==========================
-TOAST
-========================== */
-
-function mostrarToast(){
-
-toast.classList.add(
-"activo"
-);
-
-setTimeout(()=>{
-
-toast.classList.remove(
-"activo"
-);
-
-},2500);
-
-}
-
-/* ==========================
-FECHA
-========================== */
-
-function actualizarFecha(){
-
-const fecha =
-
-document.getElementById(
-"ultimaEdicion"
-);
-
-let historias =
-
-JSON.parse(
-localStorage.getItem(
-"historiasREADZONE"
-)
-) || [];
-
-if(
-!historias[idHistoria]
-){
-return;
-}
-
-fecha.textContent =
-
-"Última edición: " +
-
-(
-historias[idHistoria]
-.ultimaEdicion
-
-||
-
-"Nunca"
-);
-
-}
-
-/* ==========================
-AUTOGUARDADO
-========================== */
-
-setInterval(()=>{
-
-if(
-idHistoria === null
-){
-return;
-}
-
-let historias =
-
-JSON.parse(
-localStorage.getItem(
-"historiasREADZONE"
-)
-) || [];
-
-if(
-!historias[idHistoria]
-){
-return;
-}
-
-historias[idHistoria] = {
-
-...historias[idHistoria],
-
-titulo:
-titulo.value,
-
-contenido:
-contenido.innerHTML,
-
-portada:
-imagenGuardada ||
-historias[idHistoria]?.portada,
-
-imagen:
-imagenGuardada,
-
-video:
-videoGuardado,
-
-};
-
-localStorage.setItem(
-
-"historiasREADZONE",
-
-JSON.stringify(
-historias
-)
-
-);
-
-},5000);
-
-/* ==========================
-VISTA PREVIA
-========================== */
-
-btnVistaPrevia.addEventListener("click", () => {
-
-    const datosPreview = {
-        titulo: titulo.value,
-        contenido: contenido.innerHTML,
-        portada: portadaHistoria.src,
-        nombreHistoria: nombreHistoria.textContent
+// ─────────────────────────────────────────────
+// INSERTAR IMAGEN
+// ─────────────────────────────────────────────
+
+document.getElementById("inputImagen").addEventListener("change", function () {
+
+    const archivo = this.files[0];
+    if (!archivo) return;
+
+    const lector = new FileReader();
+
+    lector.onload = (e) => {
+        editor.focus();
+        document.execCommand("insertHTML", false, `
+            <div class="bloque-media">
+                <button class="btn-eliminar-media"
+                        onclick="this.closest('.bloque-media').remove()">✖</button>
+                <img src="${e.target.result}" class="imagen-capitulo">
+            </div>
+            <p><br></p>
+        `);
+        editor.focus();
+        marcarSinGuardar();
     };
 
-    localStorage.setItem(
-        "previewREADZONE",
-        JSON.stringify(datosPreview)
-    );
-
-    window.open(
-        "vista_previa.html",
-        "_blank"
-    );
-
+    lector.readAsDataURL(archivo);
+    this.value = "";
 });
 
-/* ==========================
-PUBLICAR
-========================== */
+// ─────────────────────────────────────────────
+// INSERTAR VIDEO
+// ─────────────────────────────────────────────
 
-btnPublicar
-.addEventListener(
-"click",
-()=>{
+document.getElementById("inputVideo").addEventListener("change", function () {
 
-guardarHistoria();
+    const archivo = this.files[0];
+    if (!archivo) return;
 
-let historias =
+    const lector = new FileReader();
 
-JSON.parse(
-localStorage.getItem(
-"historiasREADZONE"
-)
-) || [];
+    lector.onload = (e) => {
+        editor.focus();
+        document.execCommand("insertHTML", false, `
+            <div class="bloque-media">
+                <button class="btn-eliminar-media"
+                        onclick="this.closest('.bloque-media').remove()">✖</button>
+                <video controls src="${e.target.result}"></video>
+            </div>
+            <p><br></p>
+        `);
+        editor.focus();
+        marcarSinGuardar();
+    };
 
-if(
-historias[idHistoria]
-){
+    lector.readAsDataURL(archivo);
+    this.value = "";
+});
 
-historias[idHistoria]
-.publicada = true;
+// ─────────────────────────────────────────────
+// ELIMINAR MEDIA
+// ─────────────────────────────────────────────
 
-localStorage.setItem(
+editor.addEventListener("click", (e) => {
 
-"historiasREADZONE",
+    document.querySelectorAll(".bloque-media")
+            .forEach(b => b.classList.remove("activo"));
 
-JSON.stringify(
-historias
-)
+    const bloque = e.target.closest(".bloque-media");
+    if (bloque) bloque.classList.add("activo");
 
-);
+    if (e.target.classList.contains("btn-eliminar-media")) {
+        e.target.closest(".bloque-media").remove();
+        marcarSinGuardar();
+    }
+});
 
+// ─────────────────────────────────────────────
+// GUARDAR CAPÍTULO
+// ─────────────────────────────────────────────
+
+btnGuardar.addEventListener("click", guardarCapitulo);
+
+async function guardarCapitulo() {
+
+    estadoEl.innerHTML  = `<i class="fa-solid fa-circle-notch girando"></i> Guardando...`;
+    btnGuardar.disabled = true;
+
+    try {
+        const res = await fetch(`/capitulo/${capituloId}`, {
+            method:  "PUT",
+            headers: { "Content-Type": "application/json" },
+            body:    JSON.stringify({
+                titulo:    tituloInput.value,
+                contenido: editor.innerHTML
+            })
+        });
+
+        const data = await res.json();
+
+        if (!data.success) throw new Error(data.error || "Error desconocido");
+
+        estadoEl.innerHTML = `<i class="fa-solid fa-check"></i> Guardado correctamente`;
+        estadoEl.classList.add("guardado");
+        ultimaEdicionEl.textContent = "Última edición: " + new Date().toLocaleString();
+        mostrarToast();
+
+    } catch (err) {
+        console.error("Error al guardar:", err);
+        estadoEl.innerHTML = `<i class="fa-solid fa-xmark"></i> Error al guardar`;
+        alert("No se pudo guardar. Verifica tu conexión.");
+    }
+
+    btnGuardar.disabled = false;
 }
 
-alert(
-"Historia publicada correctamente"
-);
+// ─────────────────────────────────────────────
+// AUTOGUARDADO CADA 30 SEGUNDOS
+// ─────────────────────────────────────────────
 
+setInterval(async () => {
+
+    if (!historiaId || !capituloId) return;
+
+    try {
+        await fetch(`/capitulo/${capituloId}`, {
+            method:  "PUT",
+            headers: { "Content-Type": "application/json" },
+            body:    JSON.stringify({
+                titulo:    tituloInput.value,
+                contenido: editor.innerHTML
+            })
+        });
+
+        estadoEl.innerHTML = `<i class="fa-solid fa-check"></i> Guardado automáticamente`;
+        estadoEl.classList.add("guardado");
+
+    } catch (err) {
+        console.error("Autoguardado fallido:", err);
+    }
+
+}, 30000);
+
+// ─────────────────────────────────────────────
+// VISTA PREVIA
+// ─────────────────────────────────────────────
+
+btnVistaPrevia.addEventListener("click", async () => {
+
+    await guardarCapitulo();
+
+    localStorage.setItem("previewREADZONE", JSON.stringify({
+        titulo:         tituloInput.value,
+        contenido:      editor.innerHTML,
+        portada:        portadaEl.src,
+        nombreHistoria: nombreHistoriaEl.textContent
+    }));
+
+    window.open("vista_previa.html", "_blank");
 });
 
-/* ==========================
-SELECCIONAR Y BORRAR MEDIA
-========================== */
+// ─────────────────────────────────────────────
+// PUBLICAR
+// ─────────────────────────────────────────────
 
-editor.addEventListener(
-"click",
-function(e){
+btnPublicar.addEventListener("click", async () => {
 
-document
-.querySelectorAll(
-".bloque-media"
-)
-.forEach(
-bloque=>{
+    await guardarCapitulo();
 
-bloque.classList.remove(
-"activo"
-);
+    try {
+        const res  = await fetch(`/historia/${historiaId}/publicar`, { method: "PUT" });
+        const data = await res.json();
 
+        if (data.success) {
+            alert("¡Historia publicada correctamente!");
+        } else {
+            alert("Error al publicar: " + (data.error || "desconocido"));
+        }
+
+    } catch (err) {
+        console.error("Error al publicar:", err);
+        alert("No se pudo conectar con el servidor.");
+    }
+});
+
+// ─────────────────────────────────────────────
+// VOLVER → ahora va a Editar_contenido.html
+// ─────────────────────────────────────────────
+
+btnVolver.addEventListener("click", async () => {
+
+    const confirmar = confirm("¿Volver a editar los detalles de la historia?");
+    if (!confirmar) return;
+
+    // Guardar automáticamente antes de salir
+    await guardarCapitulo();
+
+    location.href = "Editar_contenido.html";
+});
+
+// ─────────────────────────────────────────────
+// TOAST
+// ─────────────────────────────────────────────
+
+function mostrarToast() {
+    toastEl.classList.add("activo");
+    setTimeout(() => toastEl.classList.remove("activo"), 2500);
 }
-);
-
-const bloque =
-e.target.closest(
-".bloque-media"
-);
-
-if(bloque){
-
-bloque.classList.add(
-"activo"
-);
-
-}
-
-});
-
-editor.addEventListener(
-"click",
-function(e){
-
-if(
-e.target.classList.contains(
-"btn-eliminar-media"
-)
-){
-
-e.target
-.closest(
-".bloque-media"
-)
-.remove();
-
-marcarSinGuardar();
-
-}
-
-});
-
-/* ==========================
-VOLVER A EDITAR CONTENIDO
-========================== */
-
-btnVolver.addEventListener(
-"click",
-()=>{
-
-    localStorage.setItem(
-        "historiaActualID",
-        historias[idHistoria].id
-    );
-
-    window.location.href =
-    "Editar_contenido.html";
-
-});
-
-/* ==========================
-INICIO
-========================== */
-
-actualizarFecha();

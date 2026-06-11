@@ -1,147 +1,144 @@
 document.addEventListener("DOMContentLoaded", () => {
-    // ELEMENTOS
-    const tituloInput = document.querySelectorAll(".grupo input")[0];
+
+    // ─────────────────────────────────────────────
+    // SESIÓN DE USUARIO
+    // ─────────────────────────────────────────────
+
+    const usuarioSesion = JSON.parse(
+        sessionStorage.getItem("usuarioREADZONE") ||
+        localStorage.getItem("usuarioREADZONE") ||
+        "null"
+    );
+
+    if (!usuarioSesion) {
+        alert("Debes iniciar sesión para crear una historia.");
+        location.href = "Login.html";
+        return;
+    }
+
+    // ─────────────────────────────────────────────
+    // ELEMENTOS DEL DOM
+    // ─────────────────────────────────────────────
+
+    const tituloInput      = document.querySelectorAll(".grupo input")[0];
     const descripcionInput = document.querySelector("textarea");
-    const tituloTop = document.querySelector(".top-left h2");
+    const tituloTop        = document.querySelector(".top-left h2");
 
     const portadaInput = document.getElementById("subirPortada");
-    const portadaBox = document.querySelector(".subir-portada");
+    const portadaBox   = document.querySelector(".subir-portada");
 
-    const tipoBotones = document.querySelectorAll(".tipos button");
-
-    const agregarBtn = document.querySelector(".agregar-btn");
-
-    const guardarBtn = document.querySelector(".guardar-btn");
-    const cancelarBtn = document.querySelector(".cancelar-btn");
-
-    const selects = document.querySelectorAll("select");
+    const tipoBotones    = document.querySelectorAll(".tipos button");
+    const guardarBtn     = document.querySelector(".guardar-btn");
+    const selects        = document.querySelectorAll("select");
     const etiquetasInput = document.querySelectorAll(".grupo input")[1];
-    const adultoSwitch = document.querySelector(".switch input");
+    const adultoSwitch   = document.querySelector(".switch input");
 
-    // ACTUALIZAR TIPO ARRIBA
+    // ─────────────────────────────────────────────
+    // ACTUALIZAR TÍTULO EN EL HEADER EN TIEMPO REAL
+    // ─────────────────────────────────────────────
 
     tituloInput.addEventListener("input", () => {
-
         const texto = tituloInput.value.trim();
-
-        if(texto === ""){
-            tituloTop.textContent = "Historia Sin Título";
-        }else{
-            tituloTop.textContent = texto;
-        }
+        tituloTop.textContent = texto === "" ? "Historia Sin Título" : texto;
     });
 
-    let portadaGuardada = "";
-    // PORTADA PREVIA
+    // ─────────────────────────────────────────────
+    // PORTADA — PREVISUALIZACIÓN
+    // ─────────────────────────────────────────────
+
+    let portadaBase64 = "";
 
     portadaInput.addEventListener("change", (e) => {
 
         const archivo = e.target.files[0];
-
-        if(!archivo) return;
+        if (!archivo) return;
 
         const lector = new FileReader();
 
-        lector.onload = function(evento){
-
-            portadaGuardada = evento.target.result;
+        lector.onload = (evento) => {
+            portadaBase64 = evento.target.result;
             portadaBox.innerHTML = `
-                <img src="${evento.target.result}" class="preview-portada">
+                <img src="${portadaBase64}" class="preview-portada"
+                     style="width:100%;height:100%;object-fit:cover;border-radius:8px;">
             `;
-        }
+        };
 
         lector.readAsDataURL(archivo);
     });
 
-    // SELECCIONAR TIPO
+    // ─────────────────────────────────────────────
+    // SELECCIONAR TIPO DE HISTORIA
+    // ─────────────────────────────────────────────
+
     tipoBotones.forEach(btn => {
-
         btn.addEventListener("click", () => {
-
-            tipoBotones.forEach(b => {
-                b.classList.remove("activo");
-            });
-
+            tipoBotones.forEach(b => b.classList.remove("activo"));
             btn.classList.add("activo");
         });
     });
 
-    // GUARDAR DATOS
-    guardarBtn.addEventListener("click", () => {
+    // ─────────────────────────────────────────────
+    // GUARDAR HISTORIA EN EL SERVIDOR
+    // ─────────────────────────────────────────────
 
-        const titulo = tituloInput.value.trim();
+    guardarBtn.addEventListener("click", async () => {
+
+        const titulo      = tituloInput.value.trim();
         const descripcion = descripcionInput.value.trim();
 
-        if(titulo === "" || descripcion === ""){
-            alert("Completa el título y la descripción");
+        if (titulo === "" || descripcion === "") {
+            alert("Completa el título y la descripción.");
             return;
         }
 
-        const personajes = [];
+        const tipo        = document.querySelector(".tipos .activo")?.textContent || "";
+        const idioma      = selects[0].value;
+        const derechos    = selects[1].value;
+        const audiencia   = selects[2].value;
+        const etiquetas   = etiquetasInput.value.trim();
+        const adulto      = adultoSwitch.checked;
 
-        document.querySelectorAll(".personaje-item span")
-        .forEach(p => {
-            personajes.push(p.textContent);
-    });
+        guardarBtn.disabled   = true;
+        guardarBtn.textContent = "Guardando...";
 
-    const datosHistoria = {
+        try {
+            const res = await fetch("/historias", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    usuario_id:       usuarioSesion.id,
+                    titulo:           titulo,
+                    descripcion:      descripcion,
+                    portada:          portadaBase64,
+                    idioma:           idioma,
+                    categoria:        tipo,
+                    derechos:         derechos,
+                    audiencia:        audiencia,
+                    etiquetas:        etiquetas,
+                    contenido_adulto: adulto
+                })
+            });
 
-        // NUEVA FORMA DE GUARDAR
-        id: Date.now().toString(),
+            const data = await res.json();
 
-        titulo: tituloInput.value.trim(),
-        descripcion: descripcionInput.value.trim(),
-        idioma: selects[0].value,
-        tipo: document.querySelector(".tipos .activo")?.textContent || "",
-        etiquetas: etiquetasInput.value,
-        derechos: selects[1].value,
-        contenidoAdulto: adultoSwitch.checked,
-        audiencia: selects[2].value,
-        portada: portadaGuardada
-};
-    // OBTENER HISTORIAS
-    const historias =
-    JSON.parse(localStorage.getItem("historiasREADZONE")) || [];
+            if (!data.success) {
+                alert("Error al guardar: " + (data.error || "desconocido"));
+                guardarBtn.disabled    = false;
+                guardarBtn.textContent = "Guardar y Continuar";
+                return;
+            }
 
-    // EVITAR DUPLICADOS
-    const existe = historias.some(h =>
-        h.titulo.toLowerCase() ===
-        datosHistoria.titulo.toLowerCase()
-    );
+            // Guardar IDs para que Escritura.html sepa qué abrir
+            localStorage.setItem("HistoriaEditando", data.historia_id);
+            localStorage.setItem("CapituloEditando", data.capitulo_id);
 
-    if(existe){
-        alert("Ya existe una historia con ese título");
-        return;
-    }
+            location.href = "Escritura.html";
 
-    // GUARDAR
-    historias.push(datosHistoria);
-
-    localStorage.setItem(
-        "historiasREADZONE",
-        JSON.stringify(historias)
-    );
-
-    // GUARDAR ID DE LAS HISTORIAS
-    localStorage.setItem(
-        "historiasActualID",
-        datosHistoria.id
-    );
-
-    alert("Historia guardada correctamente");
-
-    window.location.replace("Escritura.html");
-});
-
-    // CANCELAR
-    cancelarBtn.addEventListener("click", () => {
-
-        const confirmar = confirm(
-            "¿Seguro que quieres cancelar?"
-        );
-
-        if(confirmar){
-            location.reload();
+        } catch (err) {
+            console.error("Error al guardar historia:", err);
+            alert("No se pudo conectar con el servidor.");
+            guardarBtn.disabled    = false;
+            guardarBtn.textContent = "Guardar y Continuar";
         }
     });
 
