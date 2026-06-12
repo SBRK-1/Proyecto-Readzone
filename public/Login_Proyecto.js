@@ -3,7 +3,7 @@ const loginForm = document.getElementById("loginForm");
 loginForm.addEventListener("submit", async (e) => {
     e.preventDefault();
 
-    const correo    = document.getElementById("correo").value.trim();
+    const correo     = document.getElementById("correo").value.trim();
     const contraseña = document.getElementById("contraseña").value;
 
     if (!correo || !contraseña) {
@@ -11,23 +11,23 @@ loginForm.addEventListener("submit", async (e) => {
         return;
     }
 
-    // Deshabilitar botón para evitar doble envío
     const btnEntrar = document.getElementById("btnEntrar");
     btnEntrar.disabled    = true;
     btnEntrar.textContent = "Entrando...";
 
     try {
         const respuesta = await fetch("/login", {
-            method: "POST",
+            method:  "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ correo, contraseña })
+            body:    JSON.stringify({ correo, contraseña })
         });
 
         const resultado = await respuesta.json();
 
         if (resultado.success) {
-            // ─── Guardar sesión con la misma clave que usa toda la app ───
-            // Tanto sessionStorage (pestaña activa) como localStorage (persistente)
+            // ── CLAVE UNIFICADA: "usuario" ─────────────────────────
+            // Proyecto.js, Mostrar_historia.js y el resto de la app
+            // leen siempre localStorage.getItem("usuario")
             const sesion = {
                 id:          resultado.usuario.id,
                 nombre:      resultado.usuario.nombre,
@@ -36,10 +36,8 @@ loginForm.addEventListener("submit", async (e) => {
                 foto_perfil: resultado.usuario.foto_perfil
             };
 
-            sessionStorage.setItem("usuarioREADZONE", JSON.stringify(sesion));
-            localStorage.setItem("usuarioREADZONE",   JSON.stringify(sesion));
+            localStorage.setItem("usuario", JSON.stringify(sesion));
 
-            // Redirigir al proyecto
             window.location.href = "Proyecto.html";
 
         } else {

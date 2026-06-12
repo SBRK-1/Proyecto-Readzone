@@ -5,6 +5,7 @@
 document.addEventListener("DOMContentLoaded", async () => {
 
     // ── Verificar sesión ──────────────────────────────────────
+    // Lee siempre "usuario" — la misma clave que escribe el login
     const usuario = JSON.parse(localStorage.getItem("usuario"));
 
     if (!usuario) {
@@ -49,7 +50,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             throw new Error(`Error HTTP: ${respuesta.status}`);
         }
 
-        const datos = await respuesta.json();
+        const datos             = await respuesta.json();
         const historiasPopulares = datos.populares || [];
         const historiasRecientes = datos.recientes || [];
 
@@ -63,40 +64,38 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         if (historiasPopulares.length === 0) {
             contenedorPopulares.innerHTML =
-                `<p style="color:#64748b; padding:10px;">No hay historias populares aún.</p>`;
+                `<p style="color:#64748b;padding:10px;">No hay historias populares aún.</p>`;
         } else {
-            historiasPopulares.forEach((h) => {
-                contenedorPopulares.appendChild(crearTarjetaHistoria(h));
-            });
+            historiasPopulares.forEach(h =>
+                contenedorPopulares.appendChild(crearTarjetaHistoria(h))
+            );
         }
 
         if (historiasRecientes.length === 0) {
             contenedorRecientes.innerHTML =
-                `<p style="color:#64748b; padding:10px;">No hay historias recientes aún.</p>`;
+                `<p style="color:#64748b;padding:10px;">No hay historias recientes aún.</p>`;
         } else {
-            historiasRecientes.forEach((h) => {
-                contenedorRecientes.appendChild(crearTarjetaHistoria(h));
-            });
+            historiasRecientes.forEach(h =>
+                contenedorRecientes.appendChild(crearTarjetaHistoria(h))
+            );
         }
 
     } catch (error) {
         console.error("Error cargando historias:", error);
 
-        const msg = `<p style="color:#ef4444; padding:10px;">
+        const msg = `<p style="color:#ef4444;padding:10px;">
                         Error al cargar historias. Intenta recargar la página.
                     </p>`;
 
-        const contenedorPopulares = document.getElementById("populares");
-        const contenedorRecientes = document.getElementById("recientes");
-        if (contenedorPopulares) contenedorPopulares.innerHTML = msg;
-        if (contenedorRecientes) contenedorRecientes.innerHTML = msg;
+        const cp = document.getElementById("populares");
+        const cr = document.getElementById("recientes");
+        if (cp) cp.innerHTML = msg;
+        if (cr) cr.innerHTML = msg;
     }
 });
 
 // ─────────────────────────────────────────────
 // CREAR TARJETA DE HISTORIA
-// CORRECCIÓN CLAVE: guarda el ID en localStorage con la clave
-// "historiaSeleccionada" y navega a Mostrar_historia.html
 // ─────────────────────────────────────────────
 function crearTarjetaHistoria(h) {
     const card = document.createElement("div");
@@ -117,7 +116,6 @@ function crearTarjetaHistoria(h) {
     `;
 
     card.addEventListener("click", () => {
-        // Guardar el ID para que Mostrar_historia.js lo lea
         localStorage.setItem("historiaSeleccionada", h.id);
         window.location.href = "Mostrar_historia.html";
     });

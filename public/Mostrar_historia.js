@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────
-// ID DE LA HISTORIA (guardado al hacer clic en una card)
+// ID DE LA HISTORIA
 // ─────────────────────────────────────────────
 
 const historiaID = localStorage.getItem("historiaSeleccionada");
@@ -13,7 +13,8 @@ window.addEventListener("DOMContentLoaded", async () => {
     if (!historiaID) {
         document.querySelector(".contenedor").innerHTML =
             `<p style="padding:40px;color:red;">
-                No se encontró la historia. <a href="Proyecto.html">Vuelve al inicio.</a>
+                No se encontró la historia.
+                <a href="Proyecto.html">Vuelve al inicio.</a>
             </p>`;
         return;
     }
@@ -22,7 +23,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     await cargarCapitulos();
     await registrarVista();
     iniciarTabs();
-    iniciarBtnLeer();   // ← se registra aquí, cuando el DOM ya existe
+    iniciarBtnLeer();
 });
 
 // ─────────────────────────────────────────────
@@ -40,26 +41,21 @@ async function cargarHistoria() {
             return;
         }
 
-        // Portada
         if (historia.portada && historia.portada.trim() !== "") {
             document.getElementById("portadaHistoria").src = historia.portada;
         }
 
-        // Título
         document.getElementById("tituloHistoria").textContent =
             historia.titulo || "Sin título";
 
-        // Descripción
         document.getElementById("descripcionHistoria").textContent =
             historia.descripcion || "Sin descripción.";
 
-        // Etiquetas
         if (historia.etiquetas) {
             document.getElementById("etiquetasHistoria").textContent =
                 historia.etiquetas;
         }
 
-        // Badges
         if (historia.contenido_adulto) {
             document.getElementById("badgeAdulto").style.display = "inline";
         }
@@ -67,12 +63,10 @@ async function cargarHistoria() {
             document.getElementById("badgeCompleta").style.display = "inline";
         }
 
-        // Autor
         if (historia.usuario_id) {
             await cargarAutor(historia.usuario_id);
         }
 
-        // Vistas
         const resVistas  = await fetch(`/historia/${historiaID}/vistas`);
         const dataVistas = await resVistas.json();
         document.getElementById("vistas").textContent = dataVistas.total || 0;
@@ -115,9 +109,7 @@ async function cargarCapitulos() {
         const res       = await fetch(`/capitulos/${historiaID}`);
         const capitulos = await res.json();
 
-        document.getElementById("cantidadCapitulos").textContent =
-            capitulos.length;
-
+        document.getElementById("cantidadCapitulos").textContent = capitulos.length;
         lista.innerHTML = "";
 
         if (!capitulos.length) {
@@ -127,7 +119,7 @@ async function cargarCapitulos() {
         }
 
         capitulos.forEach((capitulo, index) => {
-            const div = document.createElement("div");
+            const div   = document.createElement("div");
             div.className = "capitulo";
 
             const fecha = capitulo.fecha_creacion
@@ -161,8 +153,6 @@ async function cargarCapitulos() {
 
 // ─────────────────────────────────────────────
 // BOTÓN COMENZAR LECTURA
-// CORRECCIÓN: se registra dentro de DOMContentLoaded (vía iniciarBtnLeer)
-// para garantizar que el elemento ya existe en el DOM
 // ─────────────────────────────────────────────
 
 function iniciarBtnLeer() {
@@ -197,13 +187,8 @@ function iniciarBtnLeer() {
 
 async function registrarVista() {
     try {
-        // Busca la sesión en sessionStorage primero, luego en localStorage
-        const usuarioSesion = JSON.parse(
-            sessionStorage.getItem("usuarioREADZONE") ||
-            localStorage.getItem("usuarioREADZONE") ||
-            localStorage.getItem("usuario") ||   // ← clave usada en el login
-            "null"
-        );
+        // ── Lee la misma clave "usuario" que escribe el login ──
+        const usuarioSesion = JSON.parse(localStorage.getItem("usuario") || "null");
 
         await fetch("/vista", {
             method:  "POST",
@@ -215,7 +200,6 @@ async function registrarVista() {
         });
 
     } catch (err) {
-        // Silencioso — no interrumpir la experiencia si falla
         console.error("Error al registrar vista:", err);
     }
 }
