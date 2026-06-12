@@ -13,7 +13,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     if (!historiaID) {
         document.querySelector(".contenedor").innerHTML =
             `<p style="padding:40px;color:red;">
-                No se encontró la historia. Vuelve al inicio.
+                No se encontró la historia. <a href="Proyecto.html">Vuelve al inicio.</a>
             </p>`;
         return;
     }
@@ -22,6 +22,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     await cargarCapitulos();
     await registrarVista();
     iniciarTabs();
+    iniciarBtnLeer();   // ← se registra aquí, cuando el DOM ya existe
 });
 
 // ─────────────────────────────────────────────
@@ -35,19 +36,20 @@ async function cargarHistoria() {
 
         if (historia.error) {
             alert("Historia no encontrada.");
-            location.href = "index.html";
+            location.href = "Proyecto.html";
             return;
         }
 
         // Portada
-        if (historia.portada) {
+        if (historia.portada && historia.portada.trim() !== "") {
             document.getElementById("portadaHistoria").src = historia.portada;
         }
 
-        // Título y descripción
+        // Título
         document.getElementById("tituloHistoria").textContent =
             historia.titulo || "Sin título";
 
+        // Descripción
         document.getElementById("descripcionHistoria").textContent =
             historia.descripcion || "Sin descripción.";
 
@@ -65,13 +67,13 @@ async function cargarHistoria() {
             document.getElementById("badgeCompleta").style.display = "inline";
         }
 
-        // Autor — cargar datos del usuario
+        // Autor
         if (historia.usuario_id) {
-            cargarAutor(historia.usuario_id);
+            await cargarAutor(historia.usuario_id);
         }
 
         // Vistas
-        const resVistas = await fetch(`/historia/${historiaID}/vistas`);
+        const resVistas  = await fetch(`/historia/${historiaID}/vistas`);
         const dataVistas = await resVistas.json();
         document.getElementById("vistas").textContent = dataVistas.total || 0;
 
@@ -86,13 +88,13 @@ async function cargarHistoria() {
 
 async function cargarAutor(usuarioId) {
     try {
-        const res    = await fetch(`/usuario/${usuarioId}`);
-        const autor  = await res.json();
+        const res   = await fetch(`/usuario/${usuarioId}`);
+        const autor = await res.json();
 
         document.getElementById("autorHistoria").textContent =
             autor.nombre || autor.usuario || "Autor desconocido";
 
-        if (autor.foto_perfil) {
+        if (autor.foto_perfil && autor.foto_perfil.trim() !== "") {
             document.getElementById("fotoAutor").src = autor.foto_perfil;
         }
 
@@ -119,12 +121,12 @@ async function cargarCapitulos() {
         lista.innerHTML = "";
 
         if (!capitulos.length) {
-            lista.innerHTML = `<p style="padding:16px;">Esta historia no tiene capítulos aún.</p>`;
+            lista.innerHTML =
+                `<p style="padding:16px;">Esta historia no tiene capítulos aún.</p>`;
             return;
         }
 
         capitulos.forEach((capitulo, index) => {
-
             const div = document.createElement("div");
             div.className = "capitulo";
 
@@ -140,47 +142,54 @@ async function cargarCapitulos() {
                 <i class="fa-solid fa-chevron-right"></i>
             `;
 
-            div.onclick = () => {
-                localStorage.setItem("historiaLectura",  historiaID);
-                localStorage.setItem("capituloLectura",  capitulo.id);
-                localStorage.setItem("capituloInicial",  index);
+            div.addEventListener("click", () => {
+                localStorage.setItem("historiaLectura", historiaID);
+                localStorage.setItem("capituloLectura", capitulo.id);
+                localStorage.setItem("capituloInicial", index);
                 location.href = "Leer_capitulo.html";
-            };
+            });
 
             lista.appendChild(div);
         });
 
     } catch (err) {
         console.error("Error al cargar capítulos:", err);
-        lista.innerHTML = `<p style="color:red;padding:16px;">Error al cargar capítulos.</p>`;
+        lista.innerHTML =
+            `<p style="color:red;padding:16px;">Error al cargar capítulos.</p>`;
     }
 }
 
 // ─────────────────────────────────────────────
-// BOTÓN COMENZAR LECTURA (abre el primer capítulo)
+// BOTÓN COMENZAR LECTURA
+// CORRECCIÓN: se registra dentro de DOMContentLoaded (vía iniciarBtnLeer)
+// para garantizar que el elemento ya existe en el DOM
 // ─────────────────────────────────────────────
 
-document.getElementById("btnLeer").onclick = async () => {
+function iniciarBtnLeer() {
+    const btn = document.getElementById("btnLeer");
+    if (!btn) return;
 
-    try {
-        const res       = await fetch(`/capitulos/${historiaID}`);
-        const capitulos = await res.json();
+    btn.addEventListener("click", async () => {
+        try {
+            const res       = await fetch(`/capitulos/${historiaID}`);
+            const capitulos = await res.json();
 
-        if (!capitulos.length) {
-            alert("Esta historia no tiene capítulos todavía.");
-            return;
+            if (!capitulos.length) {
+                alert("Esta historia no tiene capítulos todavía.");
+                return;
+            }
+
+            localStorage.setItem("historiaLectura", historiaID);
+            localStorage.setItem("capituloLectura", capitulos[0].id);
+            localStorage.setItem("capituloInicial", 0);
+            location.href = "Leer_capitulo.html";
+
+        } catch (err) {
+            console.error("Error al iniciar lectura:", err);
+            alert("No se pudo conectar con el servidor.");
         }
-
-        localStorage.setItem("historiaLectura", historiaID);
-        localStorage.setItem("capituloLectura", capitulos[0].id);
-        localStorage.setItem("capituloInicial", 0);
-        location.href = "Leer_capitulo.html";
-
-    } catch (err) {
-        console.error("Error al iniciar lectura:", err);
-        alert("No se pudo conectar con el servidor.");
-    }
-};
+    });
+}
 
 // ─────────────────────────────────────────────
 // REGISTRAR VISTA
@@ -188,14 +197,16 @@ document.getElementById("btnLeer").onclick = async () => {
 
 async function registrarVista() {
     try {
+        // Busca la sesión en sessionStorage primero, luego en localStorage
         const usuarioSesion = JSON.parse(
             sessionStorage.getItem("usuarioREADZONE") ||
             localStorage.getItem("usuarioREADZONE") ||
+            localStorage.getItem("usuario") ||   // ← clave usada en el login
             "null"
         );
 
         await fetch("/vista", {
-            method: "POST",
+            method:  "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
                 usuario_id:  usuarioSesion?.id || null,
@@ -214,14 +225,12 @@ async function registrarVista() {
 // ─────────────────────────────────────────────
 
 function iniciarTabs() {
-
-    const botonesTabs = document.querySelectorAll(".tab-btn");
-    const tabResumen  = document.getElementById("tabResumen");
+    const botonesTabs  = document.querySelectorAll(".tab-btn");
+    const tabResumen   = document.getElementById("tabResumen");
     const tabCapitulos = document.getElementById("tabCapitulos");
 
     botonesTabs.forEach(btn => {
         btn.addEventListener("click", () => {
-
             botonesTabs.forEach(b => b.classList.remove("activo"));
             btn.classList.add("activo");
 

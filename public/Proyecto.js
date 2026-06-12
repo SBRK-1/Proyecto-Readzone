@@ -9,7 +9,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     if (!usuario) {
         window.location.href = "Login_Proyecto.html";
-        return; // return aquí sí es válido porque estamos dentro de una función
+        return;
     }
 
     // ── Foto de perfil ────────────────────────────────────────
@@ -20,7 +20,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             : "./imagenes/foto-default.png";
     }
 
-    // CORREGIDO: construir los href del menú con el ID real del usuario
+    // ── Links del menú ────────────────────────────────────────
     const linkPerfil = document.getElementById("linkPerfil");
     if (linkPerfil) {
         linkPerfil.href = `User_dise.html?id=${usuario.id}`;
@@ -41,9 +41,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         });
     }
 
-    // ── Cargar historias desde el servidor ───────────────────
-    // CORREGIDO: URL relativa en lugar de http://localhost:3000
-    // para que funcione tanto en local como en producción
+    // ── Cargar historias desde el servidor ────────────────────
     try {
         const respuesta = await fetch("/historias");
 
@@ -60,42 +58,36 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         if (!contenedorPopulares || !contenedorRecientes) return;
 
-        // Limpiar estado de "cargando..."
         contenedorPopulares.innerHTML = "";
         contenedorRecientes.innerHTML = "";
 
-        // ── Renderizar populares ──────────────────────────────
         if (historiasPopulares.length === 0) {
             contenedorPopulares.innerHTML =
                 `<p style="color:#64748b; padding:10px;">No hay historias populares aún.</p>`;
         } else {
             historiasPopulares.forEach((h) => {
-                const card = crearTarjetaHistoria(h);
-                contenedorPopulares.appendChild(card);
+                contenedorPopulares.appendChild(crearTarjetaHistoria(h));
             });
         }
 
-        // ── Renderizar recientes ──────────────────────────────
         if (historiasRecientes.length === 0) {
             contenedorRecientes.innerHTML =
                 `<p style="color:#64748b; padding:10px;">No hay historias recientes aún.</p>`;
         } else {
             historiasRecientes.forEach((h) => {
-                const card = crearTarjetaHistoria(h);
-                contenedorRecientes.appendChild(card);
+                contenedorRecientes.appendChild(crearTarjetaHistoria(h));
             });
         }
 
     } catch (error) {
         console.error("Error cargando historias:", error);
 
-        const contenedorPopulares = document.getElementById("populares");
-        const contenedorRecientes = document.getElementById("recientes");
-
         const msg = `<p style="color:#ef4444; padding:10px;">
                         Error al cargar historias. Intenta recargar la página.
                     </p>`;
 
+        const contenedorPopulares = document.getElementById("populares");
+        const contenedorRecientes = document.getElementById("recientes");
         if (contenedorPopulares) contenedorPopulares.innerHTML = msg;
         if (contenedorRecientes) contenedorRecientes.innerHTML = msg;
     }
@@ -103,8 +95,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 // ─────────────────────────────────────────────
 // CREAR TARJETA DE HISTORIA
-// CORREGIDO: separado en función reutilizable y con evento click
-// para navegar a Lectura.html con el ID de la historia
+// CORRECCIÓN CLAVE: guarda el ID en localStorage con la clave
+// "historiaSeleccionada" y navega a Mostrar_historia.html
 // ─────────────────────────────────────────────
 function crearTarjetaHistoria(h) {
     const card = document.createElement("div");
@@ -124,9 +116,10 @@ function crearTarjetaHistoria(h) {
         <p>👁 ${h.total_vistas || 0} lecturas</p>
     `;
 
-    // CORREGIDO: navegar a la página de lectura al hacer click
     card.addEventListener("click", () => {
-        window.location.href = `Lectura.html?id=${h.id}`;
+        // Guardar el ID para que Mostrar_historia.js lo lea
+        localStorage.setItem("historiaSeleccionada", h.id);
+        window.location.href = "Mostrar_historia.html";
     });
 
     return card;
