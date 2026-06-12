@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const togglePassword = document.querySelector('#togglePassword');
-    const passwordInput  = document.querySelector('#password');
+    const togglePassword   = document.querySelector('#togglePassword');
+    const passwordInput    = document.querySelector('#password');
     const registrationForm = document.querySelector('#registrationForm');
 
     // ─── Mostrar / ocultar contraseña ───
@@ -42,14 +42,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // ─── Deshabilitar botón para evitar doble envío ───
-        const btnSubmit = registrationForm.querySelector('.register-btn');
+        const btnSubmit       = registrationForm.querySelector('.register-btn');
         btnSubmit.disabled    = true;
         btnSubmit.textContent = "Registrando...";
 
         try {
-            // Usar ruta relativa (sin localhost) para que funcione en producción
             const respuesta = await fetch("/registro", {
-                method: "POST",
+                method:  "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     nombre,
@@ -62,17 +61,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const resultado = await respuesta.json();
 
             if (resultado.success) {
-                // ─── Guardar sesión en sessionStorage Y localStorage ───
-                // sessionStorage: sesión activa en esta pestaña
-                // localStorage: para recordar al usuario si cierra y vuelve
-                sessionStorage.setItem("usuarioREADZONE", JSON.stringify(resultado.usuario));
-                localStorage.setItem("usuarioREADZONE",   JSON.stringify(resultado.usuario));
+                // ── CLAVE UNIFICADA: "usuario" ─────────────────────────
+                // La misma clave que usan Login_Proyecto.js y Proyecto.js
+                localStorage.setItem("usuario", JSON.stringify(resultado.usuario));
 
-                // Redirigir a la página principal del proyecto
                 window.location.href = "Proyecto.html";
 
             } else {
-                // El servidor devolvió success: false (usuario/correo duplicado, etc.)
                 alert("Error al registrar: " + (resultado.error || "Intenta con otro correo o usuario."));
                 btnSubmit.disabled    = false;
                 btnSubmit.textContent = "REGISTRARSE";
