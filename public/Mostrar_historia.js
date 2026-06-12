@@ -1,8 +1,9 @@
 // ─────────────────────────────────────────────
-// ID DE LA HISTORIA
+// SESIÓN Y ID DE HISTORIA
 // ─────────────────────────────────────────────
 
-const historiaID = localStorage.getItem("historiaSeleccionada");
+const historiaID    = localStorage.getItem("historiaSeleccionada");
+const usuarioSesion = JSON.parse(localStorage.getItem("usuario") || "null");
 
 // ─────────────────────────────────────────────
 // ARRANQUE
@@ -24,6 +25,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     await registrarVista();
     iniciarTabs();
     iniciarBtnLeer();
+    iniciarBtnBiblioteca();   // ← nuevo
 });
 
 // ─────────────────────────────────────────────
@@ -119,7 +121,7 @@ async function cargarCapitulos() {
         }
 
         capitulos.forEach((capitulo, index) => {
-            const div   = document.createElement("div");
+            const div     = document.createElement("div");
             div.className = "capitulo";
 
             const fecha = capitulo.fecha_creacion
@@ -182,14 +184,75 @@ function iniciarBtnLeer() {
 }
 
 // ─────────────────────────────────────────────
+// BOTÓN AGREGAR A BIBLIOTECA
+// ─────────────────────────────────────────────
+
+function iniciarBtnBiblioteca() {
+    const btn = document.getElementById("btnBiblioteca");
+    if (!btn) return;
+
+    // Si no hay sesión, el botón avisa en lugar de hacer nada silencioso
+    if (!usuarioSesion) {
+        btn.addEventListener("click", () => {
+            alert("Inicia sesión para agregar historias a tu biblioteca.");
+        });
+        return;
+    }
+
+    btn.addEventListener("click", async () => {
+
+        btn.disabled    = true;
+        btn.textContent = "Guardando...";
+
+        try {
+            const res  = await fetch("/biblioteca", {
+                method:  "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    usuario_id:  usuarioSesion.id,
+                    historia_id: historiaID
+                })
+            });
+
+            const data = await res.json();
+
+            if (data.success) {
+                if (data.yaExiste) {
+                    // Ya estaba guardada — informar sin cambiar el estado visual
+                    btn.disabled = false;
+                    btn.innerHTML =
+                        `<i class="fa-solid fa-bookmark"></i> Ya en tu biblioteca`;
+                    btn.classList.add("guardada");
+                } else {
+                    // Recién agregada
+                    btn.innerHTML =
+                        `<i class="fa-solid fa-check"></i> Agregada a biblioteca`;
+                    btn.classList.add("guardada");
+                    // El botón queda deshabilitado: no tiene sentido agregar dos veces
+                }
+            } else {
+                alert("No se pudo agregar: " + (data.error || "Error desconocido."));
+                btn.disabled    = false;
+                btn.innerHTML   =
+                    `<i class="fa-solid fa-bookmark"></i> Agregar a biblioteca`;
+            }
+
+        } catch (err) {
+            console.error("Error al agregar a biblioteca:", err);
+            alert("No se pudo conectar con el servidor.");
+            btn.disabled  = false;
+            btn.innerHTML =
+                `<i class="fa-solid fa-bookmark"></i> Agregar a biblioteca`;
+        }
+    });
+}
+
+// ─────────────────────────────────────────────
 // REGISTRAR VISTA
 // ─────────────────────────────────────────────
 
 async function registrarVista() {
     try {
-        // ── Lee la misma clave "usuario" que escribe el login ──
-        const usuarioSesion = JSON.parse(localStorage.getItem("usuario") || "null");
-
         await fetch("/vista", {
             method:  "POST",
             headers: { "Content-Type": "application/json" },
@@ -198,7 +261,6 @@ async function registrarVista() {
                 historia_id: historiaID
             })
         });
-
     } catch (err) {
         console.error("Error al registrar vista:", err);
     }

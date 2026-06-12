@@ -2,19 +2,16 @@
 // SESIÓN
 // ─────────────────────────────────────────────
 
-const usuarioSesion = JSON.parse(
-    sessionStorage.getItem("usuarioREADZONE") ||
-    localStorage.getItem("usuarioREADZONE") ||
-    "null"
-);
+// CORRECCIÓN: clave unificada "usuario", igual que el resto de la app
+const usuarioSesion = JSON.parse(localStorage.getItem("usuario") || "null");
 
 // ─────────────────────────────────────────────
 // ELEMENTOS
 // ─────────────────────────────────────────────
 
-const contenedor       = document.getElementById("contenedorHistorias");
-const mensajeVacio     = document.getElementById("mensajeVacio");
-const mensajeCargando  = document.getElementById("mensajeCargando");
+const contenedor      = document.getElementById("contenedorHistorias");
+const mensajeVacio    = document.getElementById("mensajeVacio");
+const mensajeCargando = document.getElementById("mensajeCargando");
 
 // ─────────────────────────────────────────────
 // ARRANQUE
@@ -25,8 +22,10 @@ window.addEventListener("DOMContentLoaded", () => {
     if (!usuarioSesion) {
         mensajeCargando.style.display = "none";
         mensajeVacio.style.display    = "flex";
-        mensajeVacio.querySelector("h2").textContent = "Inicia sesión para ver tu biblioteca";
-        mensajeVacio.querySelector("p").textContent  = "Necesitas una cuenta para guardar historias.";
+        mensajeVacio.querySelector("h2").textContent =
+            "Inicia sesión para ver tu biblioteca";
+        mensajeVacio.querySelector("p").textContent =
+            "Necesitas una cuenta para guardar historias.";
         return;
     }
 
@@ -51,7 +50,6 @@ async function cargarBiblioteca() {
         }
 
         mensajeVacio.style.display = "none";
-
         historias.forEach(historia => renderCard(historia));
 
     } catch (err) {
@@ -68,10 +66,9 @@ async function cargarBiblioteca() {
 // ─────────────────────────────────────────────
 
 function renderCard(historia) {
-
-    const card = document.createElement("div");
-    card.className    = "card-historia";
-    card.dataset.id   = historia.id;
+    const card     = document.createElement("div");
+    card.className = "card-historia";
+    card.dataset.id = historia.id;
 
     card.innerHTML = `
         <div class="card-portada">
@@ -101,11 +98,8 @@ function renderCard(historia) {
         </div>
     `;
 
-    // Clic en la card para ir a la historia
     card.addEventListener("click", (e) => {
-        // Evitar que el botón "quitar" también navegue
         if (e.target.closest(".btn-quitar")) return;
-
         localStorage.setItem("historiaSeleccionada", historia.id);
         location.href = "Mostrar_historia.html";
     });
@@ -128,11 +122,9 @@ async function quitarDeBiblioteca(historiaId, boton) {
         const data = await res.json();
 
         if (data.success) {
-            // Quitar la card del DOM
             const card = boton.closest(".card-historia");
             card.remove();
 
-            // Si no quedan historias, mostrar mensaje vacío
             if (contenedor.children.length === 0) {
                 mensajeVacio.style.display = "flex";
             }
