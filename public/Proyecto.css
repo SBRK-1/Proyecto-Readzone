@@ -308,7 +308,7 @@ main{
 .historia-card p{
     padding: 0 10px 12px;
     font-size: .9rem;
-    color: #64748b;
+    color: #0b0e11;
 }
 
 /* DESTACADOS*/
@@ -347,15 +347,15 @@ main{
 }
 
 .relatos{
-    background: rgba(255,255,255,0.15);
+    background: rgba(11, 9, 9, 0.911);
 }
 
 .historias-largas{
-    background: rgba(255,255,255,0.2);
+    background: rgba(10, 5, 5, 0.852);
 }
 
 .recomendados{
-    background: rgba(255,255,255,0.25);
+    background: rgba(13, 9, 9, 0.897);
 }
 
 .destacados a{
