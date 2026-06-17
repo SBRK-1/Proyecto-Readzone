@@ -25,7 +25,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     await registrarVista();
     iniciarTabs();
     iniciarBtnLeer();
-    iniciarBtnBiblioteca();   // ← nuevo
+    iniciarBtnBiblioteca();
 });
 
 // ─────────────────────────────────────────────
@@ -43,21 +43,26 @@ async function cargarHistoria() {
             return;
         }
 
+        // Portada
         if (historia.portada && historia.portada.trim() !== "") {
             document.getElementById("portadaHistoria").src = historia.portada;
         }
 
+        // Título
         document.getElementById("tituloHistoria").textContent =
             historia.titulo || "Sin título";
 
+        // Descripción
         document.getElementById("descripcionHistoria").textContent =
             historia.descripcion || "Sin descripción.";
 
-        if (historia.etiquetas) {
+        // Etiquetas
+        if (historia.etiquetas && historia.etiquetas.trim() !== "") {
             document.getElementById("etiquetasHistoria").textContent =
                 historia.etiquetas;
         }
 
+        // Badges
         if (historia.contenido_adulto) {
             document.getElementById("badgeAdulto").style.display = "inline";
         }
@@ -65,16 +70,27 @@ async function cargarHistoria() {
             document.getElementById("badgeCompleta").style.display = "inline";
         }
 
+        // Autor
         if (historia.usuario_id) {
             await cargarAutor(historia.usuario_id);
         }
 
-        const resVistas  = await fetch(`/historia/${historiaID}/vistas`);
-        const dataVistas = await resVistas.json();
-        document.getElementById("vistas").textContent = dataVistas.total || 0;
+        // Vistas
+        try {
+            const resVistas  = await fetch(`/historia/${historiaID}/vistas`);
+            const dataVistas = await resVistas.json();
+            document.getElementById("vistas").textContent = dataVistas.total || 0;
+        } catch (e) {
+            document.getElementById("vistas").textContent = 0;
+        }
 
     } catch (err) {
         console.error("Error al cargar historia:", err);
+        document.querySelector(".contenedor").innerHTML =
+            `<p style="padding:40px;color:red;">
+                Error al cargar la historia.
+                <a href="Proyecto.html">Vuelve al inicio.</a>
+            </p>`;
     }
 }
 
@@ -111,6 +127,7 @@ async function cargarCapitulos() {
         const res       = await fetch(`/capitulos/${historiaID}`);
         const capitulos = await res.json();
 
+        // Actualizar contador de capítulos
         document.getElementById("cantidadCapitulos").textContent = capitulos.length;
         lista.innerHTML = "";
 
@@ -125,7 +142,7 @@ async function cargarCapitulos() {
             div.className = "capitulo";
 
             const fecha = capitulo.fecha_creacion
-                ? new Date(capitulo.fecha_creacion).toLocaleDateString()
+                ? new Date(capitulo.fecha_creacion).toLocaleDateString("es-ES")
                 : "";
 
             div.innerHTML = `
@@ -162,12 +179,17 @@ function iniciarBtnLeer() {
     if (!btn) return;
 
     btn.addEventListener("click", async () => {
+        btn.disabled    = true;
+        btn.textContent = "Cargando...";
+
         try {
             const res       = await fetch(`/capitulos/${historiaID}`);
             const capitulos = await res.json();
 
             if (!capitulos.length) {
                 alert("Esta historia no tiene capítulos todavía.");
+                btn.disabled    = false;
+                btn.innerHTML   = `<i class="fa-solid fa-book-open"></i> Comenzar lectura`;
                 return;
             }
 
@@ -179,6 +201,8 @@ function iniciarBtnLeer() {
         } catch (err) {
             console.error("Error al iniciar lectura:", err);
             alert("No se pudo conectar con el servidor.");
+            btn.disabled  = false;
+            btn.innerHTML = `<i class="fa-solid fa-book-open"></i> Comenzar lectura`;
         }
     });
 }
@@ -191,7 +215,7 @@ function iniciarBtnBiblioteca() {
     const btn = document.getElementById("btnBiblioteca");
     if (!btn) return;
 
-    // Si no hay sesión, el botón avisa en lugar de hacer nada silencioso
+    // Sin sesión: avisar al hacer clic
     if (!usuarioSesion) {
         btn.addEventListener("click", () => {
             alert("Inicia sesión para agregar historias a tu biblioteca.");
@@ -210,7 +234,7 @@ function iniciarBtnBiblioteca() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     usuario_id:  usuarioSesion.id,
-                    historia_id: historiaID
+                    historia_id: parseInt(historiaID)
                 })
             });
 
@@ -218,22 +242,21 @@ function iniciarBtnBiblioteca() {
 
             if (data.success) {
                 if (data.yaExiste) {
-                    // Ya estaba guardada — informar sin cambiar el estado visual
+                    // Ya estaba guardada
                     btn.disabled = false;
                     btn.innerHTML =
                         `<i class="fa-solid fa-bookmark"></i> Ya en tu biblioteca`;
                     btn.classList.add("guardada");
                 } else {
-                    // Recién agregada
+                    // Recién agregada — deshabilitar para no duplicar
                     btn.innerHTML =
                         `<i class="fa-solid fa-check"></i> Agregada a biblioteca`;
                     btn.classList.add("guardada");
-                    // El botón queda deshabilitado: no tiene sentido agregar dos veces
                 }
             } else {
                 alert("No se pudo agregar: " + (data.error || "Error desconocido."));
-                btn.disabled    = false;
-                btn.innerHTML   =
+                btn.disabled  = false;
+                btn.innerHTML =
                     `<i class="fa-solid fa-bookmark"></i> Agregar a biblioteca`;
             }
 
@@ -252,16 +275,20 @@ function iniciarBtnBiblioteca() {
 // ─────────────────────────────────────────────
 
 async function registrarVista() {
+    // El servidor requiere usuario_id e historia_id; si no hay usuario se omite
+    if (!usuarioSesion) return;
+
     try {
         await fetch("/vista", {
             method:  "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-                usuario_id:  usuarioSesion?.id || null,
-                historia_id: historiaID
+                usuario_id:  usuarioSesion.id,
+                historia_id: parseInt(historiaID)
             })
         });
     } catch (err) {
+        // No es crítico si falla el registro de vista
         console.error("Error al registrar vista:", err);
     }
 }

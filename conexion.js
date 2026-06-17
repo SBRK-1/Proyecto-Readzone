@@ -33,9 +33,6 @@ app.use((req, res, next) => {
     next();
 });
 
-// JSON — límite aumentado a 20mb para soportar portadas en base64
-// Una imagen de 600x900 en JPEG 80% pesa aprox 80-120 KB en base64 (~160KB texto)
-// 20mb es más que suficiente y seguro para este caso
 app.use(express.json({ limit: "20mb" }));
 app.use(express.urlencoded({ extended: true, limit: "20mb" }));
 
