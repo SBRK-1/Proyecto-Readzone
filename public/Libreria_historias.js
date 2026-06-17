@@ -2,7 +2,6 @@
 // SESIÓN
 // ─────────────────────────────────────────────
 
-// CORRECCIÓN: clave unificada "usuario", igual que el resto de la app
 const usuarioSesion = JSON.parse(localStorage.getItem("usuario") || "null");
 
 // ─────────────────────────────────────────────
@@ -19,7 +18,7 @@ const mensajeCargando = document.getElementById("mensajeCargando");
 
 window.addEventListener("DOMContentLoaded", () => {
 
-    if (!usuarioSesion) {
+    if (!usuarioSesion || !usuarioSesion.id) {
         mensajeCargando.style.display = "none";
         mensajeVacio.style.display    = "flex";
         mensajeVacio.querySelector("h2").textContent =
@@ -38,13 +37,18 @@ window.addEventListener("DOMContentLoaded", () => {
 
 async function cargarBiblioteca() {
     try {
-        const res       = await fetch(`/biblioteca/${usuarioSesion.id}`);
+        const res = await fetch(`/biblioteca/${usuarioSesion.id}`);
+
+        if (!res.ok) {
+            throw new Error(`Error del servidor: ${res.status}`);
+        }
+
         const historias = await res.json();
 
         mensajeCargando.style.display = "none";
         contenedor.innerHTML          = "";
 
-        if (!historias.length) {
+        if (!Array.isArray(historias) || historias.length === 0) {
             mensajeVacio.style.display = "flex";
             return;
         }
@@ -56,7 +60,8 @@ async function cargarBiblioteca() {
         console.error("Error al cargar biblioteca:", err);
         mensajeCargando.style.display = "none";
         mensajeVacio.style.display    = "flex";
-        mensajeVacio.querySelector("p").textContent =
+        mensajeVacio.querySelector("h2").textContent = "Algo salió mal";
+        mensajeVacio.querySelector("p").textContent  =
             "Error al cargar tu biblioteca. Verifica tu conexión.";
     }
 }
@@ -66,40 +71,52 @@ async function cargarBiblioteca() {
 // ─────────────────────────────────────────────
 
 function renderCard(historia) {
-    const card     = document.createElement("div");
-    card.className = "card-historia";
+    const card      = document.createElement("div");
+    card.className  = "card-historia";
     card.dataset.id = historia.id;
+
+    const portadaSrc = historia.portada && historia.portada.trim() !== ""
+        ? historia.portada
+        : "./imagenes/Asa-mitaka.jpg";
+
+    const tituloSeguro = escapeHtml(historia.titulo || "Sin título");
+    const autorSeguro  = escapeHtml(historia.nombre_autor || "Autor desconocido");
+    const totalCaps    = historia.total_capitulos ?? 0;
 
     card.innerHTML = `
         <div class="card-portada">
             <img
-                src="${historia.portada || './imagenes/Asa-mitaka.jpg'}"
-                alt="${historia.titulo}"
+                src="${portadaSrc}"
+                alt="${tituloSeguro}"
                 onerror="this.src='./imagenes/Asa-mitaka.jpg'">
-
             <button
                 class="btn-quitar"
                 title="Quitar de la biblioteca"
-                onclick="quitarDeBiblioteca(${historia.id}, this)">
+                data-id="${historia.id}">
                 <i class="fa-solid fa-bookmark"></i>
             </button>
         </div>
-
         <div class="card-info">
-            <h3>${historia.titulo}</h3>
+            <h3>${tituloSeguro}</h3>
             <p class="autor">
                 <i class="fa-solid fa-user"></i>
-                ${historia.nombre_autor || "Autor desconocido"}
+                ${autorSeguro}
             </p>
             <p class="capitulos">
                 <i class="fa-solid fa-list"></i>
-                ${historia.total_capitulos || 0} capítulos
+                ${totalCaps} capítulo${totalCaps === 1 ? "" : "s"}
             </p>
         </div>
     `;
 
-    card.addEventListener("click", (e) => {
-        if (e.target.closest(".btn-quitar")) return;
+    // Quitar de biblioteca
+    card.querySelector(".btn-quitar").addEventListener("click", (e) => {
+        e.stopPropagation();
+        quitarDeBiblioteca(historia.id, card);
+    });
+
+    // Navegar a la historia
+    card.addEventListener("click", () => {
         localStorage.setItem("historiaSeleccionada", historia.id);
         location.href = "Mostrar_historia.html";
     });
@@ -111,18 +128,22 @@ function renderCard(historia) {
 // QUITAR HISTORIA DE LA BIBLIOTECA
 // ─────────────────────────────────────────────
 
-async function quitarDeBiblioteca(historiaId, boton) {
+async function quitarDeBiblioteca(historiaId, card) {
 
     if (!confirm("¿Quitar esta historia de tu biblioteca?")) return;
 
     try {
-        const res  = await fetch(`/biblioteca/${usuarioSesion.id}/${historiaId}`, {
+        const res = await fetch(`/biblioteca/${usuarioSesion.id}/${historiaId}`, {
             method: "DELETE"
         });
+
+        if (!res.ok) {
+            throw new Error(`Error del servidor: ${res.status}`);
+        }
+
         const data = await res.json();
 
         if (data.success) {
-            const card = boton.closest(".card-historia");
             card.remove();
 
             if (contenedor.children.length === 0) {
@@ -136,4 +157,18 @@ async function quitarDeBiblioteca(historiaId, boton) {
         console.error("Error al quitar de biblioteca:", err);
         alert("No se pudo conectar con el servidor.");
     }
+}
+
+// ─────────────────────────────────────────────
+// UTILIDADES
+// ─────────────────────────────────────────────
+
+// Previene XSS al insertar texto dinámico como innerHTML
+function escapeHtml(str) {
+    return String(str)
+        .replace(/&/g,  "&amp;")
+        .replace(/</g,  "&lt;")
+        .replace(/>/g,  "&gt;")
+        .replace(/"/g,  "&quot;")
+        .replace(/'/g,  "&#039;");
 }
