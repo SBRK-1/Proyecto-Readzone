@@ -11,20 +11,20 @@ const app = express();
 // ═══════════════════════════════════════════════════════════════
 
 const pool = mysql.createPool({
-    host:             "acela.proxy.rlwy.net",
-    user:             "root",
-    password:         "CUfMwashpeeRltZckCavAYvzQpWPkaPa",
-    database:         "railway",
-    port:             27816,
+    host:               "acela.proxy.rlwy.net",
+    user:               "root",
+    password:           "CUfMwashpeeRltZckCavAYvzQpWPkaPa",
+    database:           "railway",
+    port:               27816,
     waitForConnections: true,
-    connectionLimit:  10
+    connectionLimit:    10
 }).promise();
 
 // ═══════════════════════════════════════════════════════════════
 // MIDDLEWARE
 // ═══════════════════════════════════════════════════════════════
 
-// CORS — permite que el frontend (cualquier origen en desarrollo) llame al servidor
+// CORS
 app.use((req, res, next) => {
     res.header("Access-Control-Allow-Origin",  "*");
     res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
@@ -33,9 +33,11 @@ app.use((req, res, next) => {
     next();
 });
 
-// JSON con límite ampliado para fotos base64
-app.use(express.json({ limit: "10mb" }));
-app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+// JSON — límite aumentado a 20mb para soportar portadas en base64
+// Una imagen de 600x900 en JPEG 80% pesa aprox 80-120 KB en base64 (~160KB texto)
+// 20mb es más que suficiente y seguro para este caso
+app.use(express.json({ limit: "20mb" }));
+app.use(express.urlencoded({ extended: true, limit: "20mb" }));
 
 // Archivos estáticos
 app.use(express.static("public"));
@@ -60,10 +62,12 @@ app.get("/", (req, res) => {
 // Obtener todos los usuarios
 app.get("/usuarios", async (req, res) => {
     try {
-        const [filas] = await pool.query("SELECT id, nombre, usuario, correo, foto_perfil FROM usuarios");
+        const [filas] = await pool.query(
+            "SELECT id, nombre, usuario, correo, foto_perfil FROM usuarios"
+        );
         res.json(filas);
     } catch (error) {
-        console.error(error);
+        console.error("GET /usuarios →", error.message);
         res.status(500).json({ error: "Error al obtener usuarios" });
     }
 });
@@ -77,7 +81,6 @@ app.post("/registro", async (req, res) => {
             return res.status(400).json({ success: false, error: "Todos los campos son obligatorios" });
         }
 
-        // Verificar si el correo o usuario ya existen
         const [yaExiste] = await pool.query(
             "SELECT id FROM usuarios WHERE correo = ? OR usuario = ?",
             [correo, usuario]
@@ -102,7 +105,7 @@ app.post("/registro", async (req, res) => {
         res.json({ success: true, usuario: nuevo[0] });
 
     } catch (error) {
-        console.error(error);
+        console.error("POST /registro →", error.message);
         res.status(500).json({ success: false, error: error.message });
     }
 });
@@ -125,7 +128,7 @@ app.post("/login", async (req, res) => {
             return res.json({ success: false, error: "Credenciales incorrectas" });
         }
 
-        const u = usuarios[0];
+        const u        = usuarios[0];
         const coincide = await bcrypt.compare(contraseña, u.contraseña);
 
         if (!coincide) {
@@ -144,7 +147,7 @@ app.post("/login", async (req, res) => {
         });
 
     } catch (error) {
-        console.error(error);
+        console.error("POST /login →", error.message);
         res.status(500).json({ success: false, error: error.message });
     }
 });
@@ -172,7 +175,7 @@ app.get("/usuario/:id", async (req, res) => {
         res.json(datos[0]);
 
     } catch (error) {
-        console.error(error);
+        console.error("GET /usuario/:id →", error.message);
         res.status(500).json({ error: "Error al obtener el perfil" });
     }
 });
@@ -187,7 +190,6 @@ app.put("/usuario/:id", async (req, res) => {
             return res.json({ success: false, error: "Nombre y usuario son obligatorios" });
         }
 
-        // Verificar que el usuario no esté ocupado por otra cuenta
         const [existe] = await pool.query(
             "SELECT id FROM usuarios WHERE usuario = ? AND id <> ?",
             [usuario, id]
@@ -196,7 +198,6 @@ app.put("/usuario/:id", async (req, res) => {
             return res.json({ success: false, error: "Ese nombre de usuario ya está en uso" });
         }
 
-        // Obtener fotos actuales para no pisar con null
         const [actual] = await pool.query(
             "SELECT foto_perfil, foto_portada FROM usuarios WHERE id = ?",
             [id]
@@ -218,13 +219,21 @@ app.put("/usuario/:id", async (req, res) => {
                 biografia    = ?,
                 genero       = ?
             WHERE id = ?`,
-            [nombre, usuario, fotoPerfilFinal, fotoPortadaFinal, biografia || "", genero || "No especificado", id]
+            [
+                nombre,
+                usuario,
+                fotoPerfilFinal,
+                fotoPortadaFinal,
+                biografia || "",
+                genero    || "No especificado",
+                id
+            ]
         );
 
         res.json({ success: true });
 
     } catch (error) {
-        console.error(error);
+        console.error("PUT /usuario/:id →", error.message);
         res.status(500).json({ success: false, error: "Error al actualizar perfil" });
     }
 });
@@ -238,9 +247,9 @@ app.get("/historias", async (req, res) => {
     try {
         const [populares] = await pool.query(`
             SELECT h.*, COUNT(v.id) AS total_vistas,
-                u.nombre AS nombre_autor
+                    u.nombre AS nombre_autor
             FROM historias h
-            LEFT JOIN vistas   v ON h.id = v.historia_id
+            LEFT  JOIN vistas   v ON h.id = v.historia_id
             INNER JOIN usuarios u ON h.usuario_id = u.id
             GROUP BY h.id
             ORDER BY total_vistas DESC
@@ -249,9 +258,9 @@ app.get("/historias", async (req, res) => {
 
         const [recientes] = await pool.query(`
             SELECT h.*, COUNT(v.id) AS total_vistas,
-                u.nombre AS nombre_autor
+                    u.nombre AS nombre_autor
             FROM historias h
-            LEFT JOIN vistas   v ON h.id = v.historia_id
+            LEFT  JOIN vistas   v ON h.id = v.historia_id
             INNER JOIN usuarios u ON h.usuario_id = u.id
             GROUP BY h.id
             ORDER BY h.fecha_creacion DESC
@@ -261,7 +270,7 @@ app.get("/historias", async (req, res) => {
         res.json({ populares, recientes });
 
     } catch (error) {
-        console.error(error);
+        console.error("GET /historias →", error.message);
         res.status(500).json({ error: "Error al obtener historias" });
     }
 });
@@ -279,12 +288,15 @@ app.get("/historias/:usuarioId", async (req, res) => {
         res.json(historias);
 
     } catch (error) {
-        console.error(error);
+        console.error("GET /historias/:usuarioId →", error.message);
         res.status(500).json({ error: "Error al obtener historias del usuario" });
     }
 });
 
-// Crear historia (ruta única — reemplaza las dos que existían antes)
+// Crear historia
+// IMPORTANTE: el campo `portada` en la BD debe ser LONGTEXT.
+// Si sigue fallando ejecuta en MySQL:
+//   ALTER TABLE historias MODIFY COLUMN portada LONGTEXT;
 app.post("/historias", async (req, res) => {
     try {
         const {
@@ -301,25 +313,34 @@ app.post("/historias", async (req, res) => {
         } = req.body;
 
         if (!usuario_id) {
-            return res.json({ success: false, error: "Falta usuario_id" });
+            return res.status(400).json({ success: false, error: "Falta usuario_id" });
+        }
+
+        // Verificar que el usuario existe
+        const [usuarioExiste] = await pool.query(
+            "SELECT id FROM usuarios WHERE id = ?",
+            [usuario_id]
+        );
+        if (usuarioExiste.length === 0) {
+            return res.status(400).json({ success: false, error: "Usuario no encontrado" });
         }
 
         const [result] = await pool.query(
             `INSERT INTO historias
                 (usuario_id, titulo, descripcion, portada,
-                idioma, categoria, derechos, audiencia,
-                etiquetas, contenido_adulto)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                    idioma, categoria, derechos, audiencia,
+                    etiquetas, contenido_adulto)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
                 usuario_id,
-                titulo          || "Nueva Historia",
-                descripcion     || "",
-                portada         || "",
-                idioma          || "Español",
-                categoria       || "",
-                derechos        || "",
-                audiencia       || "",
-                etiquetas       || "",
+                titulo           || "Nueva Historia",
+                descripcion      || "",
+                portada          || "",
+                idioma           || "Español",
+                categoria        || "",
+                derechos         || "",
+                audiencia        || "",
+                etiquetas        || "",
                 contenido_adulto ? 1 : 0
             ]
         );
@@ -340,7 +361,7 @@ app.post("/historias", async (req, res) => {
         });
 
     } catch (error) {
-        console.error(error);
+        console.error("POST /historias →", error.message);
         res.status(500).json({ success: false, error: error.message });
     }
 });
@@ -350,13 +371,13 @@ app.delete("/historias/:id", async (req, res) => {
     try {
         const id = req.params.id;
 
-        await pool.query("DELETE FROM capitulos WHERE historia_id = ?",  [id]);
-        await pool.query("DELETE FROM historias  WHERE id = ?",          [id]);
+        await pool.query("DELETE FROM capitulos WHERE historia_id = ?", [id]);
+        await pool.query("DELETE FROM historias  WHERE id = ?",         [id]);
 
         res.json({ success: true });
 
     } catch (error) {
-        console.error(error);
+        console.error("DELETE /historias/:id →", error.message);
         res.status(500).json({ success: false, error: error.message });
     }
 });
@@ -376,7 +397,7 @@ app.get("/historia/:id", async (req, res) => {
         res.json(filas[0]);
 
     } catch (error) {
-        console.error(error);
+        console.error("GET /historia/:id →", error.message);
         res.status(500).json({ error: "Error al obtener la historia" });
     }
 });
@@ -406,7 +427,7 @@ app.put("/historia/:id", async (req, res) => {
             WHERE id = ?`,
             [
                 titulo, descripcion, portada || "",
-                idioma, categoria, derechos,
+                idioma, categoria,   derechos,
                 audiencia, etiquetas,
                 contenido_adulto ? 1 : 0,
                 completa         ? 1 : 0,
@@ -417,7 +438,7 @@ app.put("/historia/:id", async (req, res) => {
         res.json({ success: true });
 
     } catch (error) {
-        console.error(error);
+        console.error("PUT /historia/:id →", error.message);
         res.status(500).json({ success: false, error: error.message });
     }
 });
@@ -433,7 +454,7 @@ app.put("/historia/:id/publicar", async (req, res) => {
         res.json({ success: true });
 
     } catch (error) {
-        console.error(error);
+        console.error("PUT /historia/:id/publicar →", error.message);
         res.status(500).json({ success: false, error: error.message });
     }
 });
@@ -449,7 +470,7 @@ app.get("/historia/:id/vistas", async (req, res) => {
         res.json({ total: filas[0].total });
 
     } catch (error) {
-        console.error(error);
+        console.error("GET /historia/:id/vistas →", error.message);
         res.status(500).json({ total: 0 });
     }
 });
@@ -459,6 +480,10 @@ app.post("/vista", async (req, res) => {
     try {
         const { usuario_id, historia_id } = req.body;
 
+        if (!usuario_id || !historia_id) {
+            return res.status(400).json({ success: false, error: "Faltan datos" });
+        }
+
         await pool.query(
             "INSERT INTO vistas (usuario_id, historia_id) VALUES (?, ?)",
             [usuario_id, historia_id]
@@ -467,7 +492,7 @@ app.post("/vista", async (req, res) => {
         res.json({ success: true });
 
     } catch (error) {
-        console.error(error);
+        console.error("POST /vista →", error.message);
         res.status(500).json({ success: false });
     }
 });
@@ -482,7 +507,7 @@ app.put("/capitulos/reordenar", async (req, res) => {
     try {
         const { orden } = req.body; // [{ id, numero_capitulo }, ...]
 
-        if (!Array.isArray(orden)) {
+        if (!Array.isArray(orden) || orden.length === 0) {
             return res.status(400).json({ success: false, error: "Formato inválido" });
         }
 
@@ -496,7 +521,7 @@ app.put("/capitulos/reordenar", async (req, res) => {
         res.json({ success: true });
 
     } catch (error) {
-        console.error(error);
+        console.error("PUT /capitulos/reordenar →", error.message);
         res.status(500).json({ success: false, error: error.message });
     }
 });
@@ -514,7 +539,7 @@ app.get("/capitulos/:historiaId", async (req, res) => {
         res.json(capitulos);
 
     } catch (error) {
-        console.error(error);
+        console.error("GET /capitulos/:historiaId →", error.message);
         res.status(500).json({ error: "Error al obtener capítulos" });
     }
 });
@@ -525,19 +550,19 @@ app.post("/capitulos", async (req, res) => {
         const { historia_id, titulo, contenido, numero_capitulo } = req.body;
 
         if (!historia_id || !titulo) {
-            return res.json({ success: false, error: "Faltan datos obligatorios" });
+            return res.status(400).json({ success: false, error: "Faltan datos obligatorios" });
         }
 
         const [result] = await pool.query(
             `INSERT INTO capitulos (historia_id, titulo, contenido, numero_capitulo)
             VALUES (?, ?, ?, ?)`,
-            [historia_id, titulo, contenido || "", numero_capitulo]
+            [historia_id, titulo, contenido || "", numero_capitulo || 1]
         );
 
         res.json({ success: true, capitulo_id: result.insertId });
 
     } catch (error) {
-        console.error(error);
+        console.error("POST /capitulos →", error.message);
         res.status(500).json({ success: false, error: error.message });
     }
 });
@@ -557,7 +582,7 @@ app.get("/capitulo/:id", async (req, res) => {
         res.json(filas[0]);
 
     } catch (error) {
-        console.error(error);
+        console.error("GET /capitulo/:id →", error.message);
         res.status(500).json({ error: "Error al obtener el capítulo" });
     }
 });
@@ -567,17 +592,21 @@ app.put("/capitulo/:id", async (req, res) => {
     try {
         const { titulo, contenido } = req.body;
 
+        if (!titulo) {
+            return res.status(400).json({ success: false, error: "El título es obligatorio" });
+        }
+
         await pool.query(
             `UPDATE capitulos
             SET titulo = ?, contenido = ?, fecha_creacion = NOW()
             WHERE id = ?`,
-            [titulo, contenido, req.params.id]
+            [titulo, contenido || "", req.params.id]
         );
 
         res.json({ success: true });
 
     } catch (error) {
-        console.error(error);
+        console.error("PUT /capitulo/:id →", error.message);
         res.status(500).json({ success: false, error: error.message });
     }
 });
@@ -589,7 +618,7 @@ app.delete("/capitulo/:id", async (req, res) => {
         res.json({ success: true });
 
     } catch (error) {
-        console.error(error);
+        console.error("DELETE /capitulo/:id →", error.message);
         res.status(500).json({ success: false, error: error.message });
     }
 });
@@ -630,7 +659,7 @@ app.get("/publicaciones", async (req, res) => {
         res.json(publicaciones);
 
     } catch (error) {
-        console.error(error);
+        console.error("GET /publicaciones →", error.message);
         res.status(500).json({ error: "Error al obtener publicaciones" });
     }
 });
@@ -641,7 +670,7 @@ app.post("/publicaciones", async (req, res) => {
         const { usuario_id, texto } = req.body;
 
         if (!usuario_id || !texto) {
-            return res.json({ success: false, error: "Datos incompletos" });
+            return res.status(400).json({ success: false, error: "Datos incompletos" });
         }
 
         await pool.query(
@@ -652,8 +681,8 @@ app.post("/publicaciones", async (req, res) => {
         res.json({ success: true });
 
     } catch (error) {
-        console.error(error);
-        res.json({ success: false, error: error.message });
+        console.error("POST /publicaciones →", error.message);
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 
@@ -663,20 +692,20 @@ app.post("/respuesta", async (req, res) => {
         const { publicacion_id, usuario_id, texto } = req.body;
 
         if (!publicacion_id || !usuario_id || !texto) {
-            return res.json({ success: false, error: "Datos incompletos" });
+            return res.status(400).json({ success: false, error: "Datos incompletos" });
         }
 
         await pool.query(
             `INSERT INTO respuestas_publicacion (publicacion_id, usuario_id, texto)
-            VALUES (?, ?, ?)`,
+                VALUES (?, ?, ?)`,
             [publicacion_id, usuario_id, texto]
         );
 
         res.json({ success: true });
 
     } catch (error) {
-        console.error(error);
-        res.json({ success: false, error: error.message });
+        console.error("POST /respuesta →", error.message);
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 
@@ -691,8 +720,8 @@ app.delete("/publicaciones/:id", async (req, res) => {
         res.json({ success: true });
 
     } catch (error) {
-        console.error(error);
-        res.json({ success: false, error: error.message });
+        console.error("DELETE /publicaciones/:id →", error.message);
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 
@@ -703,6 +732,10 @@ app.delete("/publicaciones/:id", async (req, res) => {
 app.post("/progreso", async (req, res) => {
     try {
         const { usuario_id, capitulo_id } = req.body;
+
+        if (!usuario_id || !capitulo_id) {
+            return res.status(400).json({ success: false, error: "Faltan datos" });
+        }
 
         const [existe] = await pool.query(
             "SELECT id FROM progreso_lectura WHERE usuario_id = ? AND capitulo_id = ?",
@@ -724,7 +757,7 @@ app.post("/progreso", async (req, res) => {
         res.json({ success: true });
 
     } catch (error) {
-        console.error(error);
+        console.error("POST /progreso →", error.message);
         res.status(500).json({ success: false, error: error.message });
     }
 });
@@ -755,7 +788,7 @@ app.get("/biblioteca/:usuarioId", async (req, res) => {
         res.json(historias);
 
     } catch (error) {
-        console.error(error);
+        console.error("GET /biblioteca/:usuarioId →", error.message);
         res.status(500).json({ error: "Error al obtener biblioteca" });
     }
 });
@@ -763,6 +796,10 @@ app.get("/biblioteca/:usuarioId", async (req, res) => {
 app.post("/biblioteca", async (req, res) => {
     try {
         const { usuario_id, historia_id } = req.body;
+
+        if (!usuario_id || !historia_id) {
+            return res.status(400).json({ success: false, error: "Faltan datos" });
+        }
 
         const [existe] = await pool.query(
             "SELECT id FROM biblioteca WHERE usuario_id = ? AND historia_id = ?",
@@ -781,7 +818,7 @@ app.post("/biblioteca", async (req, res) => {
         res.json({ success: true, yaExiste: false });
 
     } catch (error) {
-        console.error(error);
+        console.error("POST /biblioteca →", error.message);
         res.status(500).json({ success: false, error: error.message });
     }
 });
@@ -796,7 +833,7 @@ app.delete("/biblioteca/:usuarioId/:historiaId", async (req, res) => {
         res.json({ success: true });
 
     } catch (error) {
-        console.error(error);
+        console.error("DELETE /biblioteca/:usuarioId/:historiaId →", error.message);
         res.status(500).json({ success: false, error: error.message });
     }
 });
@@ -821,9 +858,9 @@ app.get("/buscar", async (req, res) => {
             INNER JOIN usuarios u ON h.usuario_id = u.id
             LEFT  JOIN vistas   v ON h.id = v.historia_id
             WHERE h.titulo      LIKE ?
-            OR h.descripcion LIKE ?
-            OR h.etiquetas   LIKE ?
-            OR h.categoria   LIKE ?
+                OR h.descripcion LIKE ?
+                OR h.etiquetas   LIKE ?
+                OR h.categoria   LIKE ?
             GROUP BY h.id, u.nombre, u.usuario
             ORDER BY h.fecha_creacion DESC
         `, [q, q, q, q]);
@@ -832,13 +869,13 @@ app.get("/buscar", async (req, res) => {
             SELECT id, nombre, usuario, foto_perfil, biografia
             FROM usuarios
             WHERE nombre  LIKE ?
-            OR usuario LIKE ?
+                OR usuario LIKE ?
         `, [q, q]);
 
         res.json({ historias, usuarios });
 
     } catch (error) {
-        console.error(error);
+        console.error("GET /buscar →", error.message);
         res.status(500).json({ error: "Error en la búsqueda" });
     }
 });
