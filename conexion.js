@@ -11,11 +11,11 @@ const app = express();
 // ═══════════════════════════════════════════════════════════════
 
 const pool = mysql.createPool({
-    host:               "acela.proxy.rlwy.net",
-    user:               "root",
-    password:           "CUfMwashpeeRltZckCavAYvzQpWPkaPa",
-    database:           "railway",
-    port:               27816,
+    host:               process.env.DB_HOST     || "acela.proxy.rlwy.net",
+    user:               process.env.DB_USER     || "root",
+    password:           process.env.DB_PASSWORD || "CUfMwashpeeRltZckCavAYvzQpWPkaPa",
+    database:           process.env.DB_NAME     || "railway",
+    port:               process.env.DB_PORT     || 27816,
     waitForConnections: true,
     connectionLimit:    10
 }).promise();
@@ -291,9 +291,6 @@ app.get("/historias/:usuarioId", async (req, res) => {
 });
 
 // Crear historia
-// IMPORTANTE: el campo `portada` en la BD debe ser LONGTEXT.
-// Si sigue fallando ejecuta en MySQL:
-//   ALTER TABLE historias MODIFY COLUMN portada LONGTEXT;
 app.post("/historias", async (req, res) => {
     try {
         const {
@@ -327,7 +324,7 @@ app.post("/historias", async (req, res) => {
                 (usuario_id, titulo, descripcion, portada,
                     idioma, categoria, derechos, audiencia,
                     etiquetas, contenido_adulto)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
                 usuario_id,
                 titulo           || "Nueva Historia",
@@ -363,13 +360,23 @@ app.post("/historias", async (req, res) => {
     }
 });
 
-// Eliminar historia (y sus capítulos)
+// Eliminar historia (y todo lo que dependa de ella)
 app.delete("/historias/:id", async (req, res) => {
     try {
         const id = req.params.id;
 
-        await pool.query("DELETE FROM capitulos WHERE historia_id = ?", [id]);
-        await pool.query("DELETE FROM historias  WHERE id = ?",         [id]);
+        await pool.query(
+            `DELETE FROM progreso_lectura
+            WHERE capitulo_id IN (SELECT id FROM capitulos WHERE historia_id = ?)`,
+            [id]
+        );
+        await pool.query("DELETE FROM capitulos            WHERE historia_id = ?", [id]);
+        await pool.query("DELETE FROM biblioteca            WHERE historia_id = ?", [id]);
+        await pool.query("DELETE FROM vistas                WHERE historia_id = ?", [id]);
+        await pool.query("DELETE FROM historias_guardadas   WHERE historia_id = ?", [id]);
+        await pool.query("DELETE FROM historial_lectura     WHERE historia_id = ?", [id]);
+        await pool.query("DELETE FROM historias_destacadas  WHERE historia_id = ?", [id]);
+        await pool.query("DELETE FROM historias             WHERE id = ?",          [id]);
 
         res.json({ success: true });
 
@@ -498,8 +505,6 @@ app.post("/vista", async (req, res) => {
 // CAPÍTULOS
 // ═══════════════════════════════════════════════════════════════
 
-// IMPORTANTE: esta ruta debe ir ANTES de /capitulos/:historiaId
-// para que "reordenar" no sea interpretado como un ID numérico.
 app.put("/capitulos/reordenar", async (req, res) => {
     try {
         const { orden } = req.body; // [{ id, numero_capitulo }, ...]
@@ -609,9 +614,12 @@ app.put("/capitulo/:id", async (req, res) => {
 });
 
 // Eliminar capítulo
+// FIX: antes fallaba con error de FOREIGN KEY si algún usuario ya tenía
+// progreso de lectura guardado sobre ese capítulo.
 app.delete("/capitulo/:id", async (req, res) => {
     try {
-        await pool.query("DELETE FROM capitulos WHERE id = ?", [req.params.id]);
+        await pool.query("DELETE FROM progreso_lectura WHERE capitulo_id = ?", [req.params.id]);
+        await pool.query("DELETE FROM capitulos         WHERE id = ?",          [req.params.id]);
         res.json({ success: true });
 
     } catch (error) {
@@ -763,6 +771,7 @@ app.post("/progreso", async (req, res) => {
 // BIBLIOTECA
 // ═══════════════════════════════════════════════════════════════
 
+// Historias guardadas por un usuario (para pintar la página de biblioteca)
 app.get("/biblioteca/:usuarioId", async (req, res) => {
     try {
         const [historias] = await pool.query(`
@@ -790,6 +799,26 @@ app.get("/biblioteca/:usuarioId", async (req, res) => {
     }
 });
 
+// Saber si una historia puntual ya está en la biblioteca de un
+// usuario (usado por Mostrar_historia.js para pintar el botón al cargar).
+app.get("/biblioteca/:usuarioId/:historiaId/estado", async (req, res) => {
+    try {
+        const { usuarioId, historiaId } = req.params;
+
+        const [existe] = await pool.query(
+            "SELECT id FROM biblioteca WHERE usuario_id = ? AND historia_id = ?",
+            [usuarioId, historiaId]
+        );
+
+        res.json({ guardada: existe.length > 0 });
+
+    } catch (error) {
+        console.error("GET /biblioteca/:usuarioId/:historiaId/estado →", error.message);
+        res.status(500).json({ guardada: false, error: error.message });
+    }
+});
+
+// Agregar historia a la biblioteca del usuario
 app.post("/biblioteca", async (req, res) => {
     try {
         const { usuario_id, historia_id } = req.body;
@@ -820,6 +849,7 @@ app.post("/biblioteca", async (req, res) => {
     }
 });
 
+// Quitar historia de la biblioteca del usuario
 app.delete("/biblioteca/:usuarioId/:historiaId", async (req, res) => {
     try {
         await pool.query(
