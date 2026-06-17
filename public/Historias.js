@@ -1,5 +1,4 @@
 document.addEventListener("DOMContentLoaded", () => {
-
     // ─────────────────────────────────────────────
     // SESIÓN DE USUARIO
     // ─────────────────────────────────────────────
@@ -59,7 +58,7 @@ document.addEventListener("DOMContentLoaded", () => {
             portadaBase64 = evento.target.result;
             portadaBox.innerHTML = `
                 <img src="${portadaBase64}" class="preview-portada"
-                     style="width:100%;height:100%;object-fit:cover;border-radius:8px;">
+                    style="width:100%;height:100%;object-fit:cover;border-radius:8px;">
             `;
         };
 

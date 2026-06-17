@@ -2,7 +2,11 @@
 // CONFIGURACIÓN
 // ─────────────────────────────────────────────
 
-const API = ""; // Si el JS corre desde el mismo origen que Express, déjalo vacío
+// Si tu API corre en otro origen/puerto distinto al de estos
+// archivos (ej. http://localhost:3000), pon esa URL aquí.
+// Si el mismo servidor sirve este HTML/JS y también responde
+// las rutas /historias, /capitulos, etc., déjalo vacío.
+const API = "";
 
 // Obtener usuario logueado desde sessionStorage/localStorage
 const usuarioSesion = JSON.parse(
@@ -11,7 +15,8 @@ const usuarioSesion = JSON.parse(
     "null"
 );
 
-const lista = document.getElementById("listaHistorias");
+const lista    = document.getElementById("listaHistorias");
+const btnCrear = document.getElementById("crearHistoria");
 
 // ─────────────────────────────────────────────
 // INICIO
@@ -25,42 +30,23 @@ if (!usuarioSesion) {
     mostrarHistorias();
 }
 
-document.getElementById("crearHistoria")
-    .addEventListener("click", async () => {
+// ─────────────────────────────────────────────
+// BOTÓN "HISTORIA NUEVA"
+// Ya no crea la historia directamente: ahora lleva al
+// usuario a Historias.html para que complete los datos.
+// Esa página es la que hace el POST real a la base de datos.
+// ─────────────────────────────────────────────
 
-        if (!usuarioSesion) {
-            alert("Debes iniciar sesión primero.");
-            return;
-        }
+btnCrear.addEventListener("click", () => {
 
-        try {
-            const res = await fetch(`${API}/historias`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    usuario_id: usuarioSesion.id,
-                    titulo: "Nueva Historia",
-                    descripcion: "",
-                    portada: "./imagenes/Asa-mitaka.jpg"
-                })
-            });
+    if (!usuarioSesion) {
+        alert("Debes iniciar sesión primero.");
+        location.href = "Login.html";
+        return;
+    }
 
-            const data = await res.json();
-
-            if (data.success) {
-                // Guardar qué historia y capítulo editar
-                localStorage.setItem("HistoriaEditando", data.historia_id);
-                localStorage.setItem("CapituloEditando", 0);
-                location.href = "Escritura.html";
-            } else {
-                alert("Error al crear historia: " + (data.error || "desconocido"));
-            }
-
-        } catch (err) {
-            console.error("Error al crear historia:", err);
-            alert("No se pudo conectar con el servidor.");
-        }
-    });
+    location.href = "Historias.html";
+});
 
 // ─────────────────────────────────────────────
 // MOSTRAR HISTORIAS
@@ -72,6 +58,7 @@ async function mostrarHistorias() {
 
     try {
         const res = await fetch(`${API}/historias/${usuarioSesion.id}`);
+        if (!res.ok) throw new Error(`Error del servidor (${res.status})`);
         const historias = await res.json();
 
         lista.innerHTML = "";
@@ -185,6 +172,7 @@ async function eliminarHistoria(historiaId) {
             method: "DELETE"
         });
 
+        if (!res.ok) throw new Error(`Error del servidor (${res.status})`);
         const data = await res.json();
 
         if (data.success) {
@@ -226,6 +214,7 @@ async function cargarCapitulos(historiaId) {
 
     try {
         const res = await fetch(`${API}/capitulos/${historiaId}`);
+        if (!res.ok) throw new Error(`Error del servidor (${res.status})`);
         const capitulos = await res.json();
 
         listaEl.innerHTML = "";
@@ -269,6 +258,7 @@ async function crearCapitulo(historiaId) {
     try {
         // Primero contar cuántos capítulos hay para el número
         const res = await fetch(`${API}/capitulos/${historiaId}`);
+        if (!res.ok) throw new Error(`Error del servidor (${res.status})`);
         const capitulos = await res.json();
 
         const numero = capitulos.length + 1;
@@ -285,12 +275,13 @@ async function crearCapitulo(historiaId) {
             })
         });
 
+        if (!resCreate.ok) throw new Error(`Error del servidor (${resCreate.status})`);
         const data = await resCreate.json();
 
         if (data.success) {
             // Abrir directamente el nuevo capítulo en el editor
             localStorage.setItem("HistoriaEditando", historiaId);
-            localStorage.setItem("CapituloEditando", data.capitulo_id);
+            localStorage.setItem("CapituloEditando", data.capitulo_id ?? 0);
             location.href = "Escritura.html";
         } else {
             alert("Error al crear capítulo: " + (data.error || "desconocido"));
