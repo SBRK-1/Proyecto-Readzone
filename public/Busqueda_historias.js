@@ -23,12 +23,10 @@ document.addEventListener("DOMContentLoaded", () => {
             `Resultados para: "${query}"`;
         buscarEnServidor(query);
     } else {
-        // Sin query en la URL: mostrar el panel vacío limpio
         document.getElementById("tituloBusqueda").textContent =
             "Escribe algo para buscar";
     }
 
-    // Enter en el buscador dentro de esta página
     if (buscador) {
         buscador.addEventListener("keypress", (e) => {
             if (e.key === "Enter") ejecutarBusqueda();
@@ -48,7 +46,6 @@ function ejecutarBusqueda() {
         return;
     }
 
-    // Actualizar la URL sin recargar para que el historial funcione bien
     const nuevaURL = `Busqueda_historias.html?q=${encodeURIComponent(texto)}`;
     window.history.pushState({}, "", nuevaURL);
 
@@ -60,7 +57,6 @@ function ejecutarBusqueda() {
 
 // ─────────────────────────────────────────────
 // LLAMADA AL BACKEND
-// CORREGIDO: URL relativa /buscar para funcionar en cualquier entorno
 // ─────────────────────────────────────────────
 
 async function buscarEnServidor(query) {
@@ -68,7 +64,7 @@ async function buscarEnServidor(query) {
     limpiarResultados();
 
     try {
-        const res  = await fetch(`/buscar?q=${encodeURIComponent(query)}`);
+        const res = await fetch(`/buscar?q=${encodeURIComponent(query)}`);
 
         if (!res.ok) {
             throw new Error(`Error HTTP: ${res.status}`);
@@ -97,12 +93,11 @@ async function buscarEnServidor(query) {
 // ─────────────────────────────────────────────
 
 function aplicarFiltros() {
-    const tipoRadio    = document.querySelector('input[name="tipo"]:checked');
-    const ordenRadio   = document.querySelector('input[name="orden"]:checked');
+    const tipoRadio   = document.querySelector('input[name="tipo"]:checked');
+    const ordenRadio  = document.querySelector('input[name="orden"]:checked');
     const checkCompleta  = document.getElementById("filtroCompleta");
     const checkProgreso  = document.getElementById("filtroEnProgreso");
 
-    // CORREGIDO: verificar que los elementos existan antes de leer .value/.checked
     if (!tipoRadio || !ordenRadio || !checkCompleta || !checkProgreso) return;
 
     const tipo         = tipoRadio.value;
@@ -113,16 +108,14 @@ function aplicarFiltros() {
     let historias = [...todosLosResultados.historias];
     let usuarios  = [...todosLosResultados.usuarios];
 
-    // ── Filtro estado ──────────────────────────────────────────
+    // Filtro estado
     if (soloCompleta && !soloProgreso) {
-        // CORREGIDO: comparar con == 1 o con true (MySQL devuelve 1/0)
         historias = historias.filter(h => h.completa == 1 || h.completa === true);
     } else if (soloProgreso && !soloCompleta) {
         historias = historias.filter(h => h.completa == 0 || h.completa === false);
     }
-    // Si ambas marcadas o ninguna → mostrar todo
 
-    // ── Orden ──────────────────────────────────────────────────
+    // Orden
     if (orden === "populares") {
         historias.sort((a, b) => (b.total_vistas || 0) - (a.total_vistas || 0));
     } else {
@@ -130,19 +123,18 @@ function aplicarFiltros() {
             new Date(b.fecha_creacion) - new Date(a.fecha_creacion));
     }
 
-    // ── Qué sección mostrar según "tipo" ──────────────────────
+    // Qué sección mostrar
     const mostrarHistorias = tipo === "todo" || tipo === "historias";
     const mostrarUsuarios  = tipo === "todo" || tipo === "usuarios";
 
     renderizarHistorias(mostrarHistorias ? historias : []);
     renderizarUsuarios(mostrarUsuarios   ? usuarios  : []);
 
-    // Tabs: visibilidad según tipo seleccionado
-    const tabs = document.getElementById("tabs");
-    tabs.style.display = tipo === "todo" ? "flex" : "none";
-
+    const tabs  = document.getElementById("tabs");
     const listaH = document.getElementById("listaHistorias");
     const listaU = document.getElementById("listaUsuarios");
+
+    tabs.style.display = tipo === "todo" ? "flex" : "none";
 
     if (tipo === "historias") {
         listaH.style.display = "block";
@@ -156,7 +148,6 @@ function aplicarFiltros() {
         listaU.style.display = tabActual === "usuarios"  ? "block" : "none";
     }
 
-    // ── Sin resultados ────────────────────────────────────────
     const hayAlgo = (mostrarHistorias && historias.length > 0) ||
                     (mostrarUsuarios  && usuarios.length  > 0);
     mostrarSinResultados(!hayAlgo);
@@ -177,7 +168,7 @@ function renderizarHistorias(historias) {
             ? h.portada
             : "https://via.placeholder.com/80x110?text=Sin+portada";
 
-        const estado = h.completa
+        const estado = (h.completa == 1 || h.completa === true)
             ? '<span class="tag completa">Completa</span>'
             : '<span class="tag progreso">En progreso</span>';
 
@@ -214,9 +205,9 @@ function renderizarHistorias(historias) {
             </div>
         `;
 
-        // CORREGIDO: navegar a Lectura.html con el ID de la historia
+        // Navegar a la página de detalle de la historia
         card.addEventListener("click", () => {
-            window.location.href = `Lectura.html?id=${h.id}`;
+            window.location.href = `Mostrar_historia.html?id=${h.id}`;
         });
 
         lista.appendChild(card);
@@ -238,11 +229,9 @@ function renderizarUsuarios(usuarios) {
     usuarios.forEach(u => {
         const foto = (u.foto_perfil && u.foto_perfil.trim() !== "")
             ? u.foto_perfil
-            : "https://via.placeholder.com/50x50?text=👤";
+            : "https://via.placeholder.com/50x50?text=?";
 
         const card = document.createElement("div");
-        // CORREGIDO: clase "card-usuario-item" para no colisionar con el CSS
-        // de .card-usuario que el CSS original también usa para otro propósito
         card.className = "card-usuario";
         card.innerHTML = `
             <img
@@ -258,7 +247,6 @@ function renderizarUsuarios(usuarios) {
             </div>
         `;
 
-        // CORREGIDO: navegar al perfil con el ID real del usuario
         card.addEventListener("click", () => {
             window.location.href = `User_dise.html?id=${u.id}`;
         });
