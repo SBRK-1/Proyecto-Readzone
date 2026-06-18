@@ -1,6 +1,13 @@
 document.addEventListener("DOMContentLoaded", async () => {
 
     // ─────────────────────────────────────────────
+    // CONFIGURACIÓN
+    // ─────────────────────────────────────────────
+
+    // Página a la que se redirige después de guardar con éxito.
+    const PAGINA_DESPUES_DE_GUARDAR = "User_dise.html";
+
+    // ─────────────────────────────────────────────
     // ID DE LA HISTORIA — viene de Escritura.js
     // ─────────────────────────────────────────────
 
@@ -42,8 +49,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     // ESTADO LOCAL (solo de ESTA historia)
     // ─────────────────────────────────────────────
 
-    let portadaBase64  = "";
-    let capitulos      = [];
+    let portadaBase64 = "";
+    let capitulos     = [];
 
     // ─────────────────────────────────────────────
     // CARGAR HISTORIA DESDE EL SERVIDOR
@@ -54,35 +61,30 @@ document.addEventListener("DOMContentLoaded", async () => {
             const res      = await fetch(`/historia/${historiaId}`);
             const historia = await res.json();
 
-            if (historia.error) {
+            if (!res.ok || historia.error) {
                 alert("Historia no encontrada.");
                 location.href = "Modificar_historias.html";
                 return;
             }
 
-            // Título
             tituloInput.value      = historia.titulo      || "";
             descripcionInput.value = historia.descripcion || "";
             etiquetasInput.value   = historia.etiquetas   || "";
 
-            // Selects — usar helper para evitar valores vacíos
             asignarSelect(idiomaSelect,    historia.idioma,    "Español");
             asignarSelect(audienciaSelect, historia.audiencia, "Adolescente");
             asignarSelect(derechosSelect,  historia.derechos,  "Todos los derechos reservados");
             asignarSelect(categoriaSelect, historia.categoria, "Acción");
 
-            // Switches
             adultoCheck.checked   = !!historia.contenido_adulto;
             completaCheck.checked = !!historia.completa;
 
-            // Header
             nombreHistoriaEl.textContent = historia.titulo || "Historia Sin Título";
 
-            // Portada
             if (historia.portada) {
-                portadaPreview.src     = historia.portada;
-                portadaPreview.style.display = "block";
-                portadaBase64          = historia.portada;
+                portadaPreview.src            = historia.portada;
+                portadaPreview.style.display  = "block";
+                portadaBase64                 = historia.portada;
             }
 
         } catch (err) {
@@ -104,9 +106,16 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     async function cargarCapitulos() {
         try {
-            const res  = await fetch(`/capitulos/${historiaId}`);
-            capitulos  = await res.json();
+            const res   = await fetch(`/capitulos/${historiaId}`);
+            const datos = await res.json();
+
+            if (!res.ok || !Array.isArray(datos)) {
+                throw new Error(datos?.error || "Respuesta inválida del servidor");
+            }
+
+            capitulos = datos;
             renderCapitulos();
+
         } catch (err) {
             console.error("Error al cargar capítulos:", err);
             listaCapitulos.innerHTML =
@@ -137,16 +146,16 @@ document.addEventListener("DOMContentLoaded", async () => {
                 : "Sin fecha";
 
             const card = document.createElement("div");
-            card.className       = "capitulo-card";
-            card.draggable       = true;
-            card.dataset.index   = index;
-            card.dataset.id      = cap.id;
+            card.className     = "capitulo-card";
+            card.draggable     = true;
+            card.dataset.index = index;
+            card.dataset.id    = cap.id;
 
             card.innerHTML = `
                 <div class="capitulo-izquierda">
                     <i class="fa-solid fa-bars arrastrar"></i>
                     <div class="capitulo-info">
-                        <h3>${cap.titulo || "Sin título"}</h3>
+                        <h3>${escapeHtml(cap.titulo || "Sin título")}</h3>
                         <span>Capítulo ${index + 1} · ${fecha}</span>
                     </div>
                 </div>
@@ -168,7 +177,13 @@ document.addEventListener("DOMContentLoaded", async () => {
         });
 
         activarMenus();
-        activarDragDrop();
+    }
+
+    // Evita que un título con caracteres especiales rompa el HTML renderizado
+    function escapeHtml(texto) {
+        const div = document.createElement("div");
+        div.textContent = texto;
+        return div.innerHTML;
     }
 
     // ─────────────────────────────────────────────
@@ -185,7 +200,6 @@ document.addEventListener("DOMContentLoaded", async () => {
                 const cap   = capitulos[index];
                 const menu  = document.getElementById(`menuCap${cap.id}`);
 
-                // Cerrar todos los demás
                 document.querySelectorAll(".menu-capitulo").forEach(m => {
                     if (m !== menu) m.style.display = "none";
                 });
@@ -193,12 +207,6 @@ document.addEventListener("DOMContentLoaded", async () => {
                 menu.style.display =
                     menu.style.display === "block" ? "none" : "block";
             };
-        });
-
-        // Cerrar menús al hacer clic fuera
-        document.addEventListener("click", () => {
-            document.querySelectorAll(".menu-capitulo")
-                    .forEach(m => m.style.display = "none");
         });
 
         // EDITAR → ir al editor con los IDs correctos
@@ -273,57 +281,64 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     // ─────────────────────────────────────────────
-    // DRAG AND DROP — REORDENAR CAPÍTULOS
+    // CERRAR MENÚS AL HACER CLIC FUERA
+    // (registrado UNA sola vez, fuera del render, para no acumular listeners)
     // ─────────────────────────────────────────────
 
-    function activarDragDrop() {
+    document.addEventListener("click", () => {
+        document.querySelectorAll(".menu-capitulo")
+                .forEach(m => m.style.display = "none");
+    });
 
-        let arrastrado = null;
+    // ─────────────────────────────────────────────
+    // DRAG AND DROP — REORDENAR CAPÍTULOS
+    // (registrado UNA sola vez sobre el contenedor; antes se registraba
+    //  en cada render y eso duplicaba la reordenación)
+    // ─────────────────────────────────────────────
 
-        listaCapitulos.addEventListener("dragstart", e => {
-            arrastrado = e.target.closest(".capitulo-card");
-            arrastrado?.classList.add("arrastrando");
-        });
+    let arrastrado = null;
 
-        listaCapitulos.addEventListener("dragend", () => {
-            arrastrado?.classList.remove("arrastrando");
-        });
+    listaCapitulos.addEventListener("dragstart", e => {
+        arrastrado = e.target.closest(".capitulo-card");
+        arrastrado?.classList.add("arrastrando");
+    });
 
-        listaCapitulos.addEventListener("dragover", e => e.preventDefault());
+    listaCapitulos.addEventListener("dragend", () => {
+        arrastrado?.classList.remove("arrastrando");
+    });
 
-        listaCapitulos.addEventListener("drop", async e => {
-            e.preventDefault();
+    listaCapitulos.addEventListener("dragover", e => e.preventDefault());
 
-            const destino = e.target.closest(".capitulo-card");
-            if (!destino || destino === arrastrado) return;
+    listaCapitulos.addEventListener("drop", async e => {
+        e.preventDefault();
 
-            const origen = Number(arrastrado.dataset.index);
-            const nuevo  = Number(destino.dataset.index);
+        const destino = e.target.closest(".capitulo-card");
+        if (!destino || !arrastrado || destino === arrastrado) return;
 
-            // Reordenar array en memoria
-            const item = capitulos.splice(origen, 1)[0];
-            capitulos.splice(nuevo, 0, item);
+        const origen = Number(arrastrado.dataset.index);
+        const nuevo  = Number(destino.dataset.index);
 
-            renderCapitulos();
+        const item = capitulos.splice(origen, 1)[0];
+        capitulos.splice(nuevo, 0, item);
 
-            // Persistir nuevo orden solo para ESTA historia
-            try {
-                await fetch("/capitulos/reordenar", {
-                    method:  "PUT",
-                    headers: { "Content-Type": "application/json" },
-                    body:    JSON.stringify({
-                        historia_id: historiaId,
-                        orden: capitulos.map((c, i) => ({
-                            id:              c.id,
-                            numero_capitulo: i + 1
-                        }))
-                    })
-                });
-            } catch (err) {
-                console.error("Error al guardar orden:", err);
-            }
-        });
-    }
+        renderCapitulos();
+
+        try {
+            await fetch("/capitulos/reordenar", {
+                method:  "PUT",
+                headers: { "Content-Type": "application/json" },
+                body:    JSON.stringify({
+                    historia_id: historiaId,
+                    orden: capitulos.map((c, i) => ({
+                        id:              c.id,
+                        numero_capitulo: i + 1
+                    }))
+                })
+            });
+        } catch (err) {
+            console.error("Error al guardar orden:", err);
+        }
+    });
 
     // ─────────────────────────────────────────────
     // NUEVO CAPÍTULO
@@ -333,6 +348,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         const numero = capitulos.length + 1;
         const titulo = numero === 1 ? "Prólogo" : `Capítulo ${numero}`;
+
+        nuevoCapituloBtn.disabled = true;
 
         try {
             const res  = await fetch("/capitulos", {
@@ -354,11 +371,13 @@ document.addEventListener("DOMContentLoaded", async () => {
                 location.href = "Escritura.html";
             } else {
                 alert("Error al crear: " + (data.error || "desconocido"));
+                nuevoCapituloBtn.disabled = false;
             }
 
         } catch (err) {
             console.error("Error al crear capítulo:", err);
             alert("No se pudo conectar con el servidor.");
+            nuevoCapituloBtn.disabled = false;
         }
     });
 
@@ -398,18 +417,63 @@ document.addEventListener("DOMContentLoaded", async () => {
         portadaInput.click();
     });
 
-    portadaInput.addEventListener("change", e => {
+    portadaInput.addEventListener("change", async (e) => {
         const archivo = e.target.files[0];
         if (!archivo) return;
 
-        const lector = new FileReader();
-        lector.onload = ev => {
-            portadaPreview.src           = ev.target.result;
+        if (!archivo.type.startsWith("image/")) {
+            alert("Por favor selecciona un archivo de imagen válido.");
+            portadaInput.value = "";
+            return;
+        }
+
+        try {
+            const dataUrl = await comprimirImagen(archivo);
+            portadaPreview.src           = dataUrl;
             portadaPreview.style.display = "block";
-            portadaBase64                = ev.target.result;
-        };
-        lector.readAsDataURL(archivo);
+            portadaBase64                = dataUrl;
+        } catch (err) {
+            console.error("Error al procesar la portada:", err);
+            alert("No se pudo procesar la imagen seleccionada. Intenta con otra.");
+        } finally {
+            portadaInput.value = "";
+        }
     });
+
+    // Redimensiona y comprime la imagen antes de convertirla a base64
+    function comprimirImagen(archivo, maxAncho = 900, calidad = 0.82) {
+        return new Promise((resolve, reject) => {
+            const lector = new FileReader();
+
+            lector.onload = (ev) => {
+                const img = new Image();
+
+                img.onload = () => {
+                    let { width, height } = img;
+
+                    if (width > maxAncho) {
+                        height = Math.round(height * (maxAncho / width));
+                        width  = maxAncho;
+                    }
+
+                    const canvas = document.createElement("canvas");
+                    canvas.width  = width;
+                    canvas.height = height;
+
+                    const ctx = canvas.getContext("2d");
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    resolve(canvas.toDataURL("image/jpeg", calidad));
+                };
+
+                img.onerror = () => reject(new Error("No se pudo procesar la imagen"));
+                img.src     = ev.target.result;
+            };
+
+            lector.onerror = () => reject(new Error("No se pudo leer el archivo"));
+            lector.readAsDataURL(archivo);
+        });
+    }
 
     // ─────────────────────────────────────────────
     // VISTA PREVIA DE LA HISTORIA COMPLETA
@@ -422,6 +486,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // ─────────────────────────────────────────────
     // GUARDAR CAMBIOS — solo actualiza ESTA historia
+    // y redirige a la página configurada arriba
     // ─────────────────────────────────────────────
 
     guardarBtn.addEventListener("click", async () => {
@@ -457,9 +522,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
             const data = await res.json();
 
-            if (data.success) {
-                alert("Cambios guardados correctamente.");
+            if (res.ok && data.success) {
                 nombreHistoriaEl.textContent = titulo;
+                alert("Cambios guardados correctamente.");
+                location.href = PAGINA_DESPUES_DE_GUARDAR;
+                return;
             } else {
                 alert("Error al guardar: " + (data.error || "desconocido"));
             }

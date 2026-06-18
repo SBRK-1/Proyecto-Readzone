@@ -769,11 +769,6 @@ app.post("/progreso", async (req, res) => {
 // BIBLIOTECA
 // ═══════════════════════════════════════════════════════════════
 
-// Historias guardadas por un usuario (para pintar la página de biblioteca)
-// ARREGLADO: se eliminó el GROUP BY (provocaba el error
-// "ORDER BY clause ... not functionally dependent" con ONLY_FULL_GROUP_BY,
-// que hacía que esta consulta fallara con 500 y nunca se vieran las
-// historias guardadas). Ahora se usa una subconsulta para contar capítulos.
 app.get("/biblioteca/:usuarioId", async (req, res) => {
     try {
         const [historias] = await pool.query(`
