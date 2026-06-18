@@ -17,8 +17,8 @@ const pool = mysql.createPool({
     database:           process.env.DB_NAME     || "railway",
     port:               process.env.DB_PORT     || 27816,
     waitForConnections: true,
-    connectionLimit:    10,
-    charset:            "utf8mb4" // evita problemas con acentos/ñ en columnas como "contraseña"
+    connectionLimit:    30,
+    charset:            "utf8mb4" 
 }).promise();
 
 // ═══════════════════════════════════════════════════════════════
