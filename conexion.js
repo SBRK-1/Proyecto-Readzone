@@ -17,7 +17,8 @@ const pool = mysql.createPool({
     database:           process.env.DB_NAME     || "railway",
     port:               process.env.DB_PORT     || 27816,
     waitForConnections: true,
-    connectionLimit:    10
+    connectionLimit:    10,
+    charset:            "utf8mb4" // evita problemas con acentos/ñ en columnas como "contraseña"
 }).promise();
 
 // ═══════════════════════════════════════════════════════════════
@@ -240,26 +241,25 @@ app.put("/usuario/:id", async (req, res) => {
 // ═══════════════════════════════════════════════════════════════
 
 // Historias populares y recientes (página principal)
+// ARREGLADO: se quitó el GROUP BY conflictivo (u.nombre no es agregado
+// ni funcionalmente dependiente de h.id para MySQL) y se reemplazó
+// total_vistas por una subconsulta, evitando el error ONLY_FULL_GROUP_BY.
 app.get("/historias", async (req, res) => {
     try {
         const [populares] = await pool.query(`
-            SELECT h.*, COUNT(v.id) AS total_vistas,
-                    u.nombre AS nombre_autor
+            SELECT h.*, u.nombre AS nombre_autor,
+                    (SELECT COUNT(*) FROM vistas v WHERE v.historia_id = h.id) AS total_vistas
             FROM historias h
-            LEFT  JOIN vistas   v ON h.id = v.historia_id
             INNER JOIN usuarios u ON h.usuario_id = u.id
-            GROUP BY h.id
             ORDER BY total_vistas DESC
             LIMIT 4
         `);
 
         const [recientes] = await pool.query(`
-            SELECT h.*, COUNT(v.id) AS total_vistas,
-                    u.nombre AS nombre_autor
+            SELECT h.*, u.nombre AS nombre_autor,
+                    (SELECT COUNT(*) FROM vistas v WHERE v.historia_id = h.id) AS total_vistas
             FROM historias h
-            LEFT  JOIN vistas   v ON h.id = v.historia_id
             INNER JOIN usuarios u ON h.usuario_id = u.id
-            GROUP BY h.id
             ORDER BY h.fecha_creacion DESC
             LIMIT 4
         `);
@@ -770,6 +770,10 @@ app.post("/progreso", async (req, res) => {
 // ═══════════════════════════════════════════════════════════════
 
 // Historias guardadas por un usuario (para pintar la página de biblioteca)
+// ARREGLADO: se eliminó el GROUP BY (provocaba el error
+// "ORDER BY clause ... not functionally dependent" con ONLY_FULL_GROUP_BY,
+// que hacía que esta consulta fallara con 500 y nunca se vieran las
+// historias guardadas). Ahora se usa una subconsulta para contar capítulos.
 app.get("/biblioteca/:usuarioId", async (req, res) => {
     try {
         const [historias] = await pool.query(`
@@ -779,13 +783,11 @@ app.get("/biblioteca/:usuarioId", async (req, res) => {
                 h.portada,
                 h.descripcion,
                 u.nombre AS nombre_autor,
-                COUNT(c.id) AS total_capitulos
+                (SELECT COUNT(*) FROM capitulos c WHERE c.historia_id = h.id) AS total_capitulos
             FROM biblioteca b
             INNER JOIN historias h ON b.historia_id = h.id
             INNER JOIN usuarios  u ON h.usuario_id  = u.id
-            LEFT  JOIN capitulos c ON c.historia_id = h.id
             WHERE b.usuario_id = ?
-            GROUP BY h.id, h.titulo, h.portada, h.descripcion, u.nombre
             ORDER BY b.id DESC
         `, [req.params.usuarioId]);
 
@@ -878,15 +880,13 @@ app.get("/buscar", async (req, res) => {
                 h.fecha_creacion,
                 u.nombre  AS nombre_autor,
                 u.usuario AS usuario_autor,
-                COUNT(v.id) AS total_vistas
+                (SELECT COUNT(*) FROM vistas v WHERE v.historia_id = h.id) AS total_vistas
             FROM historias h
             INNER JOIN usuarios u ON h.usuario_id = u.id
-            LEFT  JOIN vistas   v ON h.id = v.historia_id
             WHERE h.titulo      LIKE ?
                 OR h.descripcion LIKE ?
                 OR h.etiquetas   LIKE ?
                 OR h.categoria   LIKE ?
-            GROUP BY h.id, u.nombre, u.usuario
             ORDER BY h.fecha_creacion DESC
         `, [q, q, q, q]);
 
