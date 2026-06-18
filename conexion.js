@@ -614,8 +614,6 @@ app.put("/capitulo/:id", async (req, res) => {
 });
 
 // Eliminar capítulo
-// FIX: antes fallaba con error de FOREIGN KEY si algún usuario ya tenía
-// progreso de lectura guardado sobre ese capítulo.
 app.delete("/capitulo/:id", async (req, res) => {
     try {
         await pool.query("DELETE FROM progreso_lectura WHERE capitulo_id = ?", [req.params.id]);

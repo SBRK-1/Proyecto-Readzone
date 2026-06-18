@@ -64,11 +64,14 @@ body {
 
 .card-historia:hover {
     transform: translateY(-5px);
-    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
 }
+
+/* ─── PORTADA ────────────────────────────────── */
 
 .card-portada {
     position: relative;
+    overflow: hidden;
 }
 
 .card-portada img {
@@ -76,33 +79,109 @@ body {
     height: 320px;
     object-fit: cover;
     display: block;
+    transition: transform 0.35s ease;
 }
 
-/* ─── BOTÓN QUITAR ───────────────────────────── */
+.card-historia:hover .card-portada img,
+.card-historia.activa .card-portada img {
+    transform: scale(1.04);
+}
+
+/* ─── OVERLAY (aparece al hover / tap) ──────── */
+
+.card-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(10, 5, 30, 0.70);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.28s ease;
+}
+
+/* Activar overlay en hover (desktop) */
+.card-historia:hover .card-overlay {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* Activar overlay al tap (móvil) */
+.card-historia.activa .card-overlay {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* ─── BOTONES DEL OVERLAY ────────────────────── */
+
+.btn-leer,
+.btn-detalles {
+    width: 75%;
+    padding: 12px 0;
+    font-size: 0.97rem;
+    font-weight: 700;
+    font-family: 'Segoe UI', sans-serif;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: transform 0.2s, filter 0.2s, box-shadow 0.2s;
+}
+
+.btn-leer {
+    background: linear-gradient(135deg, #7c3aed, #d946ef);
+    color: #fff;
+    box-shadow: 0 4px 14px rgba(124, 58, 237, 0.5);
+}
+
+.btn-leer:hover {
+    filter: brightness(1.12);
+    transform: scale(1.05);
+    box-shadow: 0 6px 20px rgba(124, 58, 237, 0.65);
+}
+
+.btn-detalles {
+    background: rgba(255, 255, 255, 0.92);
+    color: #1a1a2e;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.btn-detalles:hover {
+    filter: brightness(0.95);
+    transform: scale(1.05);
+}
+
+/* ─── BOTÓN QUITAR ( X ) ─────────────────────── */
 
 .btn-quitar {
     position: absolute;
-    top: 10px;
-    right: 10px;
-    background: rgba(124, 58, 237, 0.85);
+    top: 9px;
+    right: 9px;
+    background: rgba(220, 38, 38, 0.82);
     border: none;
     border-radius: 50%;
-    width: 36px;
-    height: 36px;
+    width: 30px;
+    height: 30px;
     display: flex;
     align-items: center;
     justify-content: center;
     color: white;
-    font-size: 0.95rem;
+    font-size: 0.85rem;
     cursor: pointer;
     transition: background 0.2s, transform 0.2s;
     backdrop-filter: blur(4px);
-    z-index: 2;
+    z-index: 10; /* siempre sobre el overlay */
 }
 
 .btn-quitar:hover {
-    background: rgba(220, 38, 38, 0.9);
-    transform: scale(1.12);
+    background: rgba(185, 28, 28, 0.96);
+    transform: scale(1.18);
 }
 
 /* ─── INFO CARD ──────────────────────────────── */
